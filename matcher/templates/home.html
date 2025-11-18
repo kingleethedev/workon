@@ -1,0 +1,172 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-lg-12">
+        <!-- Hero Section -->
+        <div class="text-center py-5 mb-5 rounded-3" style="background: linear-gradient(135deg, #198754 0%, #146c43 100%); color: white;">
+            <div class="container">
+                <h1 class="display-4 fw-bold mb-4">Welcome to WorkNet</h1>
+                <p class="lead mb-4 fs-5">Connect skilled workers with employers through AI-powered matching</p>
+                <div class="row justify-content-center">
+                    <div class="col-lg-10">
+                        <div class="row text-center">
+                            <div class="col-md-4 mb-3">
+                                <div class="p-3">
+                                    <h3 class="fw-bold mb-1">{{ total_workers }}+</h3>
+                                    <p class="mb-0 opacity-90">Skilled Workers</p>
+                                </div>
+                            </div>
+                            <div class="col-md-4 mb-3">
+                                <div class="p-3">
+                                    <h3 class="fw-bold mb-1">{{ total_jobs }}+</h3>
+                                    <p class="mb-0 opacity-90">Available Jobs</p>
+                                </div>
+                            </div>
+                            <div class="col-md-4 mb-3">
+                                <div class="p-3">
+                                    <h3 class="fw-bold mb-1">{{ total_employers }}+</h3>
+                                    <p class="mb-0 opacity-90">Employers</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="mt-5">
+                    <a href="{% url 'register' %}" class="btn btn-light btn-lg me-3 px-4 py-3 fw-semibold">
+                        <i class="fas fa-user-plus me-2"></i>Get Started
+                    </a>
+                    <a href="{% url 'login' %}" class="btn btn-outline-light btn-lg px-4 py-3 fw-semibold">
+                        <i class="fas fa-sign-in-alt me-2"></i>Sign In
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <!-- Features Section -->
+        <div class="row mb-5">
+            <div class="col-md-4 mb-4">
+                <div class="card h-100 border-0 shadow-lg rounded-3 feature-card">
+                    <div class="card-body text-center p-4">
+                        <div class="bg-success bg-opacity-10 rounded-circle d-inline-flex align-items-center justify-content-center mb-4" style="width: 80px; height: 80px;">
+                            <i class="fas fa-robot fa-2x text-success"></i>
+                        </div>
+                        <h4 class="text-dark mb-3">AI-Powered Matching</h4>
+                        <p class="text-muted">Smart algorithms match workers with jobs based on skills, location, and preferences.</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4 mb-4">
+                <div class="card h-100 border-0 shadow-lg rounded-3 feature-card">
+                    <div class="card-body text-center p-4">
+                        <div class="bg-success bg-opacity-10 rounded-circle d-inline-flex align-items-center justify-content-center mb-4" style="width: 80px; height: 80px;">
+                            <i class="fas fa-briefcase fa-2x text-success"></i>
+                        </div>
+                        <h4 class="text-dark mb-3">Find Perfect Jobs</h4>
+                        <p class="text-muted">Discover opportunities that match your skills and career goals.</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4 mb-4">
+                <div class="card h-100 border-0 shadow-lg rounded-3 feature-card">
+                    <div class="card-body text-center p-4">
+                        <div class="bg-success bg-opacity-10 rounded-circle d-inline-flex align-items-center justify-content-center mb-4" style="width: 80px; height: 80px;">
+                            <i class="fas fa-users fa-2x text-success"></i>
+                        </div>
+                        <h4 class="text-dark mb-3">Hire Top Talent</h4>
+                        <p class="text-muted">Connect with skilled workers who meet your specific requirements.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- How It Works Section -->
+        <div class="row mb-5">
+            <div class="col-12 text-center mb-5">
+                <h2 class="text-dark mb-3">How WorkNet Works</h2>
+                <p class="text-muted lead">Get started in three simple steps</p>
+            </div>
+            <div class="col-md-4 text-center">
+                <div class="position-relative">
+                    <div class="bg-success text-white rounded-circle d-inline-flex align-items-center justify-content-center mb-3" style="width: 60px; height: 60px;">
+                        <span class="h4 mb-0">1</span>
+                    </div>
+                    <h5 class="text-dark">Create Your Profile</h5>
+                    <p class="text-muted">Sign up and build your professional profile with skills and experience.</p>
+                </div>
+            </div>
+            <div class="col-md-4 text-center">
+                <div class="position-relative">
+                    <div class="bg-success text-white rounded-circle d-inline-flex align-items-center justify-content-center mb-3" style="width: 60px; height: 60px;">
+                        <span class="h4 mb-0">2</span>
+                    </div>
+                    <h5 class="text-dark">Get AI Recommendations</h5>
+                    <p class="text-muted">Our AI matches you with perfect job opportunities or skilled workers.</p>
+                </div>
+            </div>
+            <div class="col-md-4 text-center">
+                <div class="position-relative">
+                    <div class="bg-success text-white rounded-circle d-inline-flex align-items-center justify-content-center mb-3" style="width: 60px; height: 60px;">
+                        <span class="h4 mb-0">3</span>
+                    </div>
+                    <h5 class="text-dark">Connect & Work</h5>
+                    <p class="text-muted">Start working together and build successful partnerships.</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Call to Action -->
+        <div class="text-center py-5">
+            <div class="card bg-light-success border-0 rounded-3 py-5">
+                <div class="card-body">
+                    <h3 class="text-dark mb-3">Ready to Get Started?</h3>
+                    <p class="text-muted mb-4 fs-5">Join thousands of workers and employers already using WorkNet</p>
+                    <a href="{% url 'register' %}" class="btn btn-success btn-lg px-5 py-3 fw-semibold">
+                        <i class="fas fa-rocket me-2"></i>Join WorkNet Today
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.feature-card {
+    transition: transform 0.3s ease-in-out, box-shadow 0.3s ease-in-out;
+}
+
+.feature-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 12px 35px rgba(25, 135, 84, 0.15) !important;
+}
+
+.rounded-3 {
+    border-radius: 12px !important;
+}
+
+.bg-light-success {
+    background-color: rgba(25, 135, 84, 0.05) !important;
+}
+
+.btn-success {
+    background: linear-gradient(135deg, #198754, #146c43);
+    border: none;
+    border-radius: 8px;
+    transition: all 0.3s ease;
+}
+
+.btn-success:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(25, 135, 84, 0.3);
+}
+
+.btn-light, .btn-outline-light {
+    border-radius: 8px;
+    transition: all 0.3s ease;
+}
+
+.btn-light:hover, .btn-outline-light:hover {
+    transform: translateY(-2px);
+}
+</style>
+{% endblock %}

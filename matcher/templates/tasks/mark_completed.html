@@ -1,0 +1,67 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header">
+                <h4 class="mb-0">
+                    <i class="fas fa-check-circle me-2 text-success"></i>Mark Task as Completed
+                </h4>
+            </div>
+            <div class="card-body">
+                <!-- Task Summary -->
+                <div class="card bg-light mb-4">
+                    <div class="card-body">
+                        <h5>{{ task.job.title }}</h5>
+                        <p class="text-muted mb-2">{{ task.job.description }}</p>
+                        <div class="small">
+                            <strong>Employer:</strong> {{ task.job.employer.user.username }}<br>
+                            <strong>Location:</strong> {{ task.job.location }}<br>
+                            <strong>Budget:</strong> ${{ task.job.budget }}<br>
+                            <strong>Started:</strong> {{ task.start_date|date:"M d, Y" }}
+                        </div>
+                    </div>
+                </div>
+
+                <form method="post">
+                    {% csrf_token %}
+                    
+                    <!-- Feedback -->
+                    <div class="mb-4">
+                        <label for="feedback" class="form-label">
+                            <strong>Work Completion Feedback (Optional)</strong>
+                        </label>
+                        <textarea name="feedback" id="feedback" class="form-control" rows="4" 
+                                  placeholder="Describe the work you completed, any challenges faced, or additional notes for the employer..."></textarea>
+                        <div class="form-text">
+                            This feedback will be shared with the employer when they review your completion.
+                        </div>
+                    </div>
+
+                    <!-- Digital Signature Confirmation -->
+                    <div class="alert alert-warning">
+                        <h6><i class="fas fa-shield-alt me-2"></i>Digital Signature</h6>
+                        <p class="mb-2">By submitting this form, you digitally confirm that:</p>
+                        <ul class="mb-2">
+                            <li>You have completed all work as specified in the job requirements</li>
+                            <li>The work meets quality standards</li>
+                            <li>You are ready for employer review and approval</li>
+                        </ul>
+                        <small class="text-muted">
+                            This action will be recorded as: <em>"Digitally confirmed by {{ user.username }} on {% now "F j, Y \a\t g:i A" %}"</em>
+                        </small>
+                    </div>
+
+                    <div class="d-flex justify-content-between">
+                        <a href="{% url 'my_tasks' %}" class="btn btn-secondary">Cancel</a>
+                        <button type="submit" class="btn btn-success">
+                            <i class="fas fa-check-circle me-1"></i>Confirm Completion
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

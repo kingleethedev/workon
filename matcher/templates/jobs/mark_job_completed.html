@@ -1,0 +1,187 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-8">
+        <div class="card shadow-lg border-0 rounded-3">
+            <div class="card-header bg-success text-white py-4">
+                <div class="d-flex align-items-center">
+                    <i class="fas fa-check-circle fa-2x me-3"></i>
+                    <div>
+                        <h4 class="mb-1">Mark Job as Completed</h4>
+                        <p class="mb-0 opacity-75">Submit your work for employer approval</p>
+                    </div>
+                </div>
+            </div>
+            <div class="card-body p-5">
+                <!-- Job Summary -->
+                <div class="alert alert-success bg-light-success border-0 rounded-3 mb-4">
+                    <div class="d-flex align-items-start">
+                        <i class="fas fa-clipboard-check fa-2x me-3 text-success mt-1"></i>
+                        <div class="flex-grow-1">
+                            <h5 class="text-success mb-3">
+                                <i class="fas fa-info-circle me-2"></i>Job Details
+                            </h5>
+                            <div class="row g-3">
+                                <div class="col-sm-6">
+                                    <strong class="text-muted d-block">Job Title</strong>
+                                    <span class="text-dark">{{ job.title }}</span>
+                                </div>
+                                <div class="col-sm-6">
+                                    <strong class="text-muted d-block">Employer</strong>
+                                    <span class="text-dark">{{ job.employer.user.username }}</span>
+                                </div>
+                                <div class="col-sm-6">
+                                    <strong class="text-muted d-block">Budget</strong>
+                                    <span class="text-success fw-bold">${{ job.budget }}</span>
+                                </div>
+                                <div class="col-sm-6">
+                                    <strong class="text-muted d-block">Status</strong>
+                                    <span class="badge bg-warning text-dark rounded-pill">In Progress</span>
+                                </div>
+                            </div>
+                            <div class="mt-3">
+                                <strong class="text-muted d-block">Description</strong>
+                                <p class="text-dark mb-0">{{ job.description|truncatewords:30 }}</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <form method="post" class="needs-validation" novalidate>
+                    {% csrf_token %}
+                    
+                    <!-- Feedback Section -->
+                    <div class="card border-0 rounded-3 mb-4">
+                        <div class="card-header bg-light py-3">
+                            <h5 class="mb-0 text-dark">
+                                <i class="fas fa-comment-dots me-2 text-success"></i>Work Completion Notes
+                            </h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="mb-3">
+                                <label for="feedback" class="form-label fw-semibold text-dark">
+                                    Additional Notes (Optional)
+                                </label>
+                                <textarea class="form-control rounded-3" id="feedback" name="feedback" 
+                                          rows="4" 
+                                          placeholder="Describe the work you completed, any challenges faced, or additional notes for the employer..."></textarea>
+                                <div class="form-text text-muted mt-2">
+                                    <i class="fas fa-lightbulb me-1 text-success"></i>
+                                    This feedback will be shared with the employer to help them understand your work.
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Digital Signature Section -->
+                    <div class="card border-0 rounded-3 mb-4">
+                        <div class="card-header bg-light py-3">
+                            <h5 class="mb-0 text-dark">
+                                <i class="fas fa-signature me-2 text-success"></i>Digital Signature
+                            </h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="mb-3">
+                                <label for="signature" class="form-label fw-semibold text-dark">
+                                    Confirm Your Identity
+                                </label>
+                                <div class="input-group">
+                                    <span class="input-group-text bg-success text-white">
+                                        <i class="fas fa-user-check"></i>
+                                    </span>
+                                    <input type="text" class="form-control rounded-end" id="signature" name="signature"
+                                           value="Completed by {{ request.user.username }}"
+                                           required readonly>
+                                </div>
+                                <div class="form-text text-muted mt-2">
+                                    <i class="fas fa-shield-alt me-1 text-success"></i>
+                                    This serves as your digital signature confirming completion of all work as agreed.
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Confirmation Section -->
+                    <div class="card border-0 rounded-3 mb-4">
+                        <div class="card-header bg-light py-3">
+                            <h5 class="mb-0 text-dark">
+                                <i class="fas fa-clipboard-check me-2 text-success"></i>Final Confirmation
+                            </h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="confirmation" required>
+                                <label class="form-check-label text-dark fw-semibold" for="confirmation">
+                                    I confirm that I have completed all work as specified in the job requirements and am submitting this for employer review and approval.
+                                </label>
+                            </div>
+                            <div class="form-text text-muted mt-2">
+                                <i class="fas fa-exclamation-triangle me-1 text-warning"></i>
+                                By checking this box, you certify that the work is complete and ready for employer evaluation.
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Action Buttons -->
+                    <div class="d-flex gap-3 mt-5 pt-4 border-top">
+                        <button type="submit" class="btn btn-success btn-lg px-5 py-3 fw-semibold flex-fill">
+                            <i class="fas fa-check-circle me-2"></i>Submit Completed Work
+                        </button>
+                        <a href="{% url 'my_jobs' %}" class="btn btn-outline-secondary btn-lg px-4 py-3">
+                            <i class="fas fa-arrow-left me-2"></i>Cancel
+                        </a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.card {
+    transition: transform 0.2s ease-in-out;
+}
+
+.card:hover {
+    transform: translateY(-2px);
+}
+
+.rounded-3 {
+    border-radius: 12px !important;
+}
+
+.bg-light-success {
+    background-color: rgba(25, 135, 84, 0.05) !important;
+}
+
+.form-control {
+    border: 2px solid #e9ecef;
+    border-radius: 8px;
+    padding: 12px 16px;
+    transition: all 0.3s ease;
+}
+
+.form-control:focus {
+    border-color: #198754;
+    box-shadow: 0 0 0 0.2rem rgba(25, 135, 84, 0.15);
+}
+
+.btn-success {
+    background: linear-gradient(135deg, #198754, #146c43);
+    border: none;
+    border-radius: 8px;
+    transition: all 0.3s ease;
+}
+
+.btn-success:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 15px rgba(25, 135, 84, 0.3);
+}
+
+.form-check-input:checked {
+    background-color: #198754;
+    border-color: #198754;
+}
+</style>
+{% endblock %}

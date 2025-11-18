@@ -1,0 +1,616 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-lg-10">
+        <!-- Header Section -->
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <div>
+                <h2 class="text-dark mb-1">
+                    <i class="fas fa-check-circle me-2 text-success"></i>Approve Job Completion
+                </h2>
+                <p class="text-muted mb-0">Review and approve the completed work</p>
+            </div>
+            <a href="{% url 'employer_approvals' %}" class="btn btn-outline-success">
+                <i class="fas fa-arrow-left me-1"></i>Back to Approvals
+            </a>
+        </div>
+
+        <div class="row">
+            <!-- Main Approval Form -->
+            <div class="col-lg-8">
+                <div class="card">
+                    <div class="card-header bg-success text-white">
+                        <h4 class="mb-0">
+                            <i class="fas fa-clipboard-check me-2"></i>Job Completion Approval
+                        </h4>
+                    </div>
+                    <div class="card-body">
+                        <!-- Job Details Card -->
+                        <div class="card border-success mb-4">
+                            <div class="card-header bg-success bg-opacity-10 border-success">
+                                <h5 class="mb-0 text-success">
+                                    <i class="fas fa-briefcase me-2"></i>Job Details
+                                </h5>
+                            </div>
+                            <div class="card-body">
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <div class="detail-item mb-3">
+                                            <strong class="text-dark">Job Title:</strong>
+                                            <p class="mb-0 text-muted">{{ job.title }}</p>
+                                        </div>
+                                        <div class="detail-item mb-3">
+                                            <strong class="text-dark">Worker:</strong>
+                                            <p class="mb-0 text-muted">{{ job.get_assigned_worker.user.username }}</p>
+                                        </div>
+                                        <div class="detail-item">
+                                            <strong class="text-dark">Budget:</strong>
+                                            <p class="mb-0 text-success fw-bold">${{ job.budget }}</p>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="detail-item mb-3">
+                                            <strong class="text-dark">Completed On:</strong>
+                                            <p class="mb-0 text-muted">{{ job.worker_completion_date|date:"M d, Y" }}</p>
+                                        </div>
+                                        <div class="detail-item mb-3">
+                                            <strong class="text-dark">Location:</strong>
+                                            <p class="mb-0 text-muted">{{ job.location }}</p>
+                                        </div>
+                                        <div class="detail-item">
+                                            <strong class="text-dark">Status:</strong>
+                                            <span class="badge bg-warning">Awaiting Approval</span>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="mt-3">
+                                    <strong class="text-dark">Description:</strong>
+                                    <p class="text-muted mb-0">{{ job.description }}</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Worker Signature -->
+                        {% if job.worker_signature %}
+                        <div class="card border-warning mb-4">
+                            <div class="card-header bg-warning bg-opacity-10 border-warning">
+                                <h6 class="mb-0 text-warning">
+                                    <i class="fas fa-signature me-2"></i>Worker's Digital Signature
+                                </h6>
+                            </div>
+                            <div class="card-body">
+                                <div class="d-flex align-items-center">
+                                    <div class="signature-icon bg-warning bg-opacity-10 rounded-circle d-flex align-items-center justify-content-center me-3" style="width: 40px; height: 40px;">
+                                        <i class="fas fa-pen text-warning"></i>
+                                    </div>
+                                    <div>
+                                        <p class="mb-0 fw-bold">{{ job.worker_signature }}</p>
+                                        <small class="text-muted">Signed upon completion</small>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        {% endif %}
+
+                        <form method="post">
+                            {% csrf_token %}
+                            
+                            <!-- Rating Section -->
+                            <div class="card mb-4">
+                                <div class="card-header bg-light">
+                                    <h6 class="mb-0 text-dark">
+                                        <i class="fas fa-star me-2 text-warning"></i>Rate Worker Performance
+                                    </h6>
+                                </div>
+                                <div class="card-body">
+                                    <label class="form-label fw-bold text-dark mb-3">How would you rate the quality of work?</label>
+                                    <div class="rating-section">
+                                        <div class="rating-stars mb-3">
+                                            {% for i in "12345" %}
+                                            <div class="rating-option">
+                                                <input type="radio" class="btn-check" name="rating" id="rating{{ i }}" value="{{ i }}" {% if forloop.counter == 5 %}checked{% endif %}>
+                                                <label class="rating-label btn btn-outline-warning" for="rating{{ i }}">
+                                                    <div class="rating-content">
+                                                        <i class="fas fa-star fa-lg mb-1"></i>
+                                                        <span class="rating-number">{{ i }}</span>
+                                                    </div>
+                                                </label>
+                                            </div>
+                                            {% endfor %}
+                                        </div>
+                                        <div class="rating-labels">
+                                            <small class="text-muted me-3">Poor</small>
+                                            <small class="text-muted me-3">Fair</small>
+                                            <small class="text-muted me-3">Good</small>
+                                            <small class="text-muted me-3">Very Good</small>
+                                            <small class="text-muted">Excellent</small>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Feedback Section -->
+                            <div class="card mb-4">
+                                <div class="card-header bg-light">
+                                    <h6 class="mb-0 text-dark">
+                                        <i class="fas fa-comment me-2 text-primary"></i>Provide Feedback
+                                    </h6>
+                                </div>
+                                <div class="card-body">
+                                    <label for="feedback" class="form-label fw-bold text-dark">
+                                        Share your feedback with the worker (Optional)
+                                    </label>
+                                    <textarea class="form-control search-box" id="feedback" name="feedback" 
+                                              rows="4" placeholder="What did the worker do well? Any areas for improvement? Your feedback helps them grow..."></textarea>
+                                    <div class="form-text">
+                                        <i class="fas fa-lightbulb me-1 text-warning"></i>
+                                        Constructive feedback helps workers improve and builds better relationships
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Digital Signature Section -->
+                            <div class="card mb-4">
+                                <div class="card-header bg-light">
+                                    <h6 class="mb-0 text-dark">
+                                        <i class="fas fa-signature me-2 text-success"></i>Final Approval
+                                    </h6>
+                                </div>
+                                <div class="card-body">
+                                    <div class="mb-3">
+                                        <label for="signature" class="form-label fw-bold text-dark">
+                                            Your Digital Signature
+                                        </label>
+                                        <input type="text" class="form-control search-box" id="signature" name="signature"
+                                               value="Approved by {{ request.user.username }}"
+                                               required>
+                                        <div class="form-text">
+                                            <i class="fas fa-info-circle me-1"></i>
+                                            This serves as your official digital signature confirming approval
+                                        </div>
+                                    </div>
+
+                                    <!-- Confirmation Checkbox -->
+                                    <div class="approval-confirmation">
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="checkbox" id="confirmation" required>
+                                            <label class="form-check-label fw-bold text-dark" for="confirmation">
+                                                <i class="fas fa-check-circle me-1 text-success"></i>
+                                                I confirm that the work has been completed satisfactorily and approve this job for payment processing.
+                                            </label>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Action Buttons -->
+                            <div class="d-flex justify-content-between align-items-center pt-3 border-top">
+                                <a href="{% url 'employer_approvals' %}" class="btn btn-outline-secondary">
+                                    <i class="fas fa-times me-1"></i>Cancel Review
+                                </a>
+                                <div class="d-flex gap-2">
+                                    <button type="reset" class="btn btn-outline-warning">
+                                        <i class="fas fa-redo me-1"></i>Reset Form
+                                    </button>
+                                    <button type="submit" class="btn btn-success">
+                                        <i class="fas fa-check-circle me-1"></i>Approve & Complete Job
+                                    </button>
+                                </div>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Sidebar Information -->
+            <div class="col-lg-4">
+                <!-- Approval Guidelines -->
+                <div class="card mb-4">
+                    <div class="card-header bg-light">
+                        <h6 class="mb-0 text-dark">
+                            <i class="fas fa-info-circle me-2 text-info"></i>Approval Guidelines
+                        </h6>
+                    </div>
+                    <div class="card-body">
+                        <div class="guideline-item d-flex align-items-start mb-3">
+                            <div class="guideline-icon bg-success bg-opacity-10 rounded-circle d-flex align-items-center justify-content-center me-3 flex-shrink-0" style="width: 32px; height: 32px;">
+                                <i class="fas fa-check text-success small"></i>
+                            </div>
+                            <div>
+                                <h6 class="small fw-bold mb-1">Verify Completion</h6>
+                                <p class="text-muted small mb-0">Ensure all work meets the job requirements</p>
+                            </div>
+                        </div>
+                        <div class="guideline-item d-flex align-items-start mb-3">
+                            <div class="guideline-icon bg-warning bg-opacity-10 rounded-circle d-flex align-items-center justify-content-center me-3 flex-shrink-0" style="width: 32px; height: 32px;">
+                                <i class="fas fa-star text-warning small"></i>
+                            </div>
+                            <div>
+                                <h6 class="small fw-bold mb-1">Fair Rating</h6>
+                                <p class="text-muted small mb-0">Provide honest feedback for future reference</p>
+                            </div>
+                        </div>
+                        <div class="guideline-item d-flex align-items-start">
+                            <div class="guideline-icon bg-primary bg-opacity-10 rounded-circle d-flex align-items-center justify-content-center me-3 flex-shrink-0" style="width: 32px; height: 32px;">
+                                <i class="fas fa-clock text-primary small"></i>
+                            </div>
+                            <div>
+                                <h6 class="small fw-bold mb-1">Timely Approval</h6>
+                                <p class="text-muted small mb-0">Approve within 7 days for best practices</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Worker Information -->
+                <div class="card mb-4">
+                    <div class="card-header bg-light">
+                        <h6 class="mb-0 text-dark">
+                            <i class="fas fa-user me-2 text-success"></i>Worker Profile
+                        </h6>
+                    </div>
+                    <div class="card-body">
+                        <div class="text-center mb-3">
+                            <div class="worker-avatar bg-success bg-opacity-10 rounded-circle d-inline-flex align-items-center justify-content-center mb-2" style="width: 60px; height: 60px;">
+                                <i class="fas fa-user text-success fa-lg"></i>
+                            </div>
+                            <h6 class="mb-1">{{ job.get_assigned_worker.user.username }}</h6>
+                            <div class="text-warning small mb-2">
+                                <i class="fas fa-star"></i>
+                                <i class="fas fa-star"></i>
+                                <i class="fas fa-star"></i>
+                                <i class="fas fa-star"></i>
+                                <i class="fas fa-star-half-alt"></i>
+                                <span class="text-muted ms-1">(4.5)</span>
+                            </div>
+                        </div>
+                        <div class="worker-stats">
+                            <div class="row text-center">
+                                <div class="col-6">
+                                    <div class="stat-value text-primary">{{ job.get_assigned_worker.completed_jobs_count|add:1 }}</div>
+                                    <div class="stat-label">Total Jobs</div>
+                                </div>
+                                <div class="col-6">
+                                    <div class="stat-value text-success">{{ job.get_assigned_worker.reliability_score|floatformat:1 }}</div>
+                                    <div class="stat-label">Reliability</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Next Steps -->
+                <div class="card">
+                    <div class="card-header bg-light">
+                        <h6 class="mb-0 text-dark">
+                            <i class="fas fa-forward me-2 text-success"></i>What Happens Next?
+                        </h6>
+                    </div>
+                    <div class="card-body">
+                        <div class="timeline">
+                            <div class="timeline-item completed">
+                                <div class="timeline-marker bg-success"></div>
+                                <div class="timeline-content">
+                                    <small class="fw-bold">Work Completed</small>
+                                    <small class="text-muted d-block">Worker marked job as done</small>
+                                </div>
+                            </div>
+                            <div class="timeline-item current">
+                                <div class="timeline-marker bg-warning"></div>
+                                <div class="timeline-content">
+                                    <small class="fw-bold">Your Review</small>
+                                    <small class="text-muted d-block">Approval pending</small>
+                                </div>
+                            </div>
+                            <div class="timeline-item upcoming">
+                                <div class="timeline-marker bg-light"></div>
+                                <div class="timeline-content">
+                                    <small class="fw-bold">Payment Processing</small>
+                                    <small class="text-muted d-block">After approval</small>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.card {
+    border: 1px solid #e4ebe4;
+    border-radius: 12px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    transition: all 0.3s ease;
+}
+
+.card:hover {
+    box-shadow: 0 4px 16px rgba(0,0,0,0.15);
+}
+
+.search-box {
+    border: 2px solid #e4ebe4;
+    border-radius: 8px;
+    padding: 0.75rem 1rem;
+    transition: all 0.3s ease;
+}
+
+.search-box:focus {
+    border-color: #14a800;
+    box-shadow: 0 0 0 3px rgba(20, 168, 0, 0.1);
+}
+
+/* Rating Stars */
+.rating-stars {
+    display: flex;
+    justify-content: center;
+    gap: 0.5rem;
+}
+
+.rating-option {
+    flex: 1;
+}
+
+.rating-label {
+    width: 100%;
+    padding: 1rem 0.5rem;
+    border: 2px solid #e4ebe4;
+    border-radius: 8px;
+    transition: all 0.3s ease;
+    text-align: center;
+}
+
+.rating-label:hover {
+    border-color: #ffc107;
+    transform: translateY(-2px);
+}
+
+.btn-check:checked + .rating-label {
+    background-color: #ffc107;
+    border-color: #ffc107;
+    color: #000;
+    transform: scale(1.05);
+}
+
+.rating-content {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.25rem;
+}
+
+.rating-number {
+    font-weight: bold;
+    font-size: 0.9rem;
+}
+
+.rating-labels {
+    display: flex;
+    justify-content: space-between;
+    margin-top: 0.5rem;
+}
+
+/* Detail Items */
+.detail-item {
+    padding: 0.5rem 0;
+}
+
+/* Signature Icon */
+.signature-icon {
+    transition: all 0.3s ease;
+}
+
+/* Guidelines */
+.guideline-item {
+    transition: all 0.3s ease;
+    padding: 0.5rem;
+    border-radius: 6px;
+}
+
+.guideline-item:hover {
+    background-color: #f8f9fa;
+}
+
+.guideline-icon {
+    transition: all 0.3s ease;
+}
+
+.guideline-item:hover .guideline-icon {
+    transform: scale(1.1);
+}
+
+/* Worker Stats */
+.worker-avatar {
+    transition: all 0.3s ease;
+}
+
+.stat-value {
+    font-size: 1.25rem;
+    font-weight: bold;
+}
+
+.stat-label {
+    font-size: 0.75rem;
+    color: #5e6d55;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+/* Timeline */
+.timeline {
+    position: relative;
+    padding-left: 1.5rem;
+}
+
+.timeline-item {
+    position: relative;
+    padding-bottom: 1rem;
+}
+
+.timeline-marker {
+    position: absolute;
+    left: -1.5rem;
+    top: 0.25rem;
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    border: 2px solid #e4ebe4;
+}
+
+.timeline-item.completed .timeline-marker {
+    background-color: #14a800;
+    border-color: #14a800;
+}
+
+.timeline-item.current .timeline-marker {
+    background-color: #ffc107;
+    border-color: #ffc107;
+}
+
+.timeline-item.upcoming .timeline-marker {
+    background-color: #f8f9fa;
+    border-color: #e4ebe4;
+}
+
+.timeline-content {
+    margin-left: 0.5rem;
+}
+
+/* Approval Confirmation */
+.approval-confirmation {
+    background-color: #f8f9fa;
+    padding: 1rem;
+    border-radius: 8px;
+    border-left: 4px solid #14a800;
+}
+
+.form-check-input:checked {
+    background-color: #14a800;
+    border-color: #14a800;
+}
+
+.form-check-input:focus {
+    border-color: #14a800;
+    box-shadow: 0 0 0 0.25rem rgba(20, 168, 0, 0.25);
+}
+
+.btn-success {
+    background-color: #14a800;
+    border-color: #14a800;
+    font-weight: 600;
+    transition: all 0.3s ease;
+}
+
+.btn-success:hover {
+    background-color: #108a00;
+    border-color: #108a00;
+    transform: translateY(-2px);
+}
+
+.btn-outline-secondary, .btn-outline-warning {
+    border-width: 2px;
+    font-weight: 500;
+    transition: all 0.3s ease;
+}
+
+.btn-outline-secondary:hover, .btn-outline-warning:hover {
+    transform: translateY(-1px);
+}
+</style>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Add interactivity to rating stars
+    const ratingLabels = document.querySelectorAll('.rating-label');
+    ratingLabels.forEach(label => {
+        label.addEventListener('mouseenter', function() {
+            this.style.transform = 'translateY(-2px) scale(1.05)';
+        });
+        
+        label.addEventListener('mouseleave', function() {
+            const input = this.previousElementSibling;
+            if (!input.checked) {
+                this.style.transform = '';
+            }
+        });
+    });
+
+    // Add character counter for feedback
+    const feedbackTextarea = document.getElementById('feedback');
+    if (feedbackTextarea) {
+        const counter = document.createElement('div');
+        counter.className = 'form-text text-end small mt-1';
+        counter.innerHTML = `<span class="char-count">0</span> / 500 characters`;
+        
+        feedbackTextarea.parentNode.appendChild(counter);
+        
+        feedbackTextarea.addEventListener('input', function() {
+            const count = this.value.length;
+            const charCount = counter.querySelector('.char-count');
+            charCount.textContent = count;
+            
+            if (count > 450) {
+                counter.classList.add('text-warning');
+            } else {
+                counter.classList.remove('text-warning');
+            }
+        });
+        
+        // Trigger initial count
+        feedbackTextarea.dispatchEvent(new Event('input'));
+    }
+
+    // Form validation
+    const form = document.querySelector('form');
+    form.addEventListener('submit', function(e) {
+        const confirmation = document.getElementById('confirmation');
+        const signature = document.getElementById('signature');
+        let isValid = true;
+
+        if (!confirmation.checked) {
+            confirmation.classList.add('is-invalid');
+            isValid = false;
+        } else {
+            confirmation.classList.remove('is-invalid');
+        }
+
+        if (!signature.value.trim()) {
+            signature.classList.add('is-invalid');
+            isValid = false;
+        } else {
+            signature.classList.remove('is-invalid');
+        }
+
+        if (!isValid) {
+            e.preventDefault();
+            // Scroll to first error
+            const firstError = document.querySelector('.is-invalid');
+            if (firstError) {
+                firstError.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }
+        }
+    });
+
+    // Remove invalid class on interaction
+    const confirmation = document.getElementById('confirmation');
+    if (confirmation) {
+        confirmation.addEventListener('change', function() {
+            if (this.checked) {
+                this.classList.remove('is-invalid');
+            }
+        });
+    }
+
+    const signature = document.getElementById('signature');
+    if (signature) {
+        signature.addEventListener('input', function() {
+            if (this.value.trim()) {
+                this.classList.remove('is-invalid');
+            }
+        });
+    }
+});
+</script>
+{% endblock %}

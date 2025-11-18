@@ -1,0 +1,434 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-10">
+        <!-- Header Section -->
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <div>
+                <h2 class="text-dark mb-1">
+                    <i class="fas fa-robot me-2 text-success"></i>WorkNet AI Assistant
+                </h2>
+                <p class="text-muted mb-0">Get instant help with jobs, skills, and career guidance</p>
+            </div>
+            <div class="d-flex gap-2">
+                <a href="{% url 'skill_analysis' %}" class="btn btn-outline-success">
+                    <i class="fas fa-chart-line me-1"></i>Skill Analysis
+                </a>
+                <a href="{% url 'profile_edit' %}" class="btn btn-success">
+                    <i class="fas fa-user-edit me-1"></i>Edit Profile
+                </a>
+            </div>
+        </div>
+
+        <!-- Main Chat Container -->
+        <div class="card">
+            <div class="card-header bg-success text-white">
+                <div class="d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">
+                        <i class="fas fa-comments me-2"></i>AI Assistant
+                    </h5>
+                    <div class="d-flex align-items-center">
+                        <span class="badge bg-light text-success me-2">Online</span>
+                        <button class="btn btn-sm btn-light" onclick="clearChat()">
+                            <i class="fas fa-trash me-1"></i>Clear
+                        </button>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="card-body p-0">
+                <!-- Chat Messages -->
+                <div class="chat-container bg-light p-4" 
+                     style="height: 500px; overflow-y: auto;" id="chatMessages">
+                    {% for message in chat_history %}
+                    <div class="mb-4 {% if message.message_type == 'user' %}text-end{% endif %}">
+                        <div class="d-flex {% if message.message_type == 'user' %}justify-content-end{% else %}justify-content-start{% endif %} align-items-start">
+                            {% if message.message_type == 'bot' %}
+                            <div class="bot-avatar bg-success rounded-circle d-flex align-items-center justify-content-center me-3" style="width: 40px; height: 40px;">
+                                <i class="fas fa-robot text-white"></i>
+                            </div>
+                            {% endif %}
+                            
+                            <div class="message-bubble bg-{% if message.message_type == 'user' %}success{% else %}white{% endif %} 
+                                        text-{% if message.message_type == 'user' %}white{% else %}dark{% endif %} 
+                                        p-3 rounded-3 shadow-sm" style="max-width: 70%;">
+                                <div class="message-content">
+                                    {{ message.content|linebreaks }}
+                                </div>
+                                <div class="message-time small text-{% if message.message_type == 'user' %}light{% else %}muted{% endif %} mt-2">
+                                    <i class="fas fa-clock me-1"></i>{{ message.timestamp|time }}
+                                </div>
+                            </div>
+
+                            {% if message.message_type == 'user' %}
+                            <div class="user-avatar bg-primary rounded-circle d-flex align-items-center justify-content-center ms-3" style="width: 40px; height: 40px;">
+                                <i class="fas fa-user text-white"></i>
+                            </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                    {% empty %}
+                    <div class="text-center py-5">
+                        <div class="welcome-icon bg-success bg-opacity-10 rounded-circle d-inline-flex align-items-center justify-content-center mb-4" style="width: 80px; height: 80px;">
+                            <i class="fas fa-robot fa-2x text-success"></i>
+                        </div>
+                        <h4 class="text-dark mb-3">Welcome to WorkNet Assistant! 👋</h4>
+                        <p class="text-muted mb-4">I'm here to help you with career advice, skill analysis, job search tips, and more.</p>
+                        <div class="row justify-content-center">
+                            <div class="col-md-8">
+                                <div class="alert alert-success">
+                                    <strong>Try asking me:</strong><br>
+                                    • "What skills are in demand for my profile?"<br>
+                                    • "How can I improve my job applications?"<br>
+                                    • "Analyze my current skills and suggest improvements"
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+
+                <!-- Chat Input -->
+                <div class="card-footer border-0 bg-light">
+                    <form method="post" id="chatForm" class="mb-3">
+                        {% csrf_token %}
+                        <div class="input-group input-group-lg">
+                            {{ form.message }}
+                            <button type="submit" class="btn btn-success">
+                                <i class="fas fa-paper-plane me-1"></i>Send
+                            </button>
+                        </div>
+                    </form>
+
+                    <div class="typing-tips">
+                        <small class="text-muted">
+                            <i class="fas fa-lightbulb me-1 text-warning"></i>
+                            <strong>Pro Tip:</strong> Ask about skill gaps, job market trends, or profile optimization
+                        </small>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Quick Questions Section -->
+        <div class="row mt-4">
+            <div class="col-md-6">
+                <div class="card h-100">
+                    <div class="card-header bg-light">
+                        <h6 class="mb-0 text-dark">
+                            <i class="fas fa-user-tie me-2 text-primary"></i>For Workers
+                        </h6>
+                    </div>
+                    <div class="card-body">
+                        <div class="d-grid gap-2">
+                            <button class="btn btn-outline-success text-start quick-question" data-question="What are the most in-demand skills right now for someone with my background?">
+                                <i class="fas fa-chart-line me-2"></i>
+                                In-demand skills for my profile
+                            </button>
+                            <button class="btn btn-outline-success text-start quick-question" data-question="How can I improve my reliability score and get more job matches?">
+                                <i class="fas fa-star me-2"></i>
+                                Improve reliability score
+                            </button>
+                            <button class="btn btn-outline-success text-start quick-question" data-question="What should I include in my profile to attract better job opportunities?">
+                                <i class="fas fa-user-edit me-2"></i>
+                                Optimize my profile
+                            </button>
+                            <button class="btn btn-outline-success text-start quick-question" data-question="Can you analyze my current skills and suggest areas for improvement?">
+                                <i class="fas fa-analytics me-2"></i>
+                                Analyze my skills
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="col-md-6">
+                <div class="card h-100">
+                    <div class="card-header bg-light">
+                        <h6 class="mb-0 text-dark">
+                            <i class="fas fa-building me-2 text-success"></i>For Employers
+                        </h6>
+                    </div>
+                    <div class="card-body">
+                        <div class="d-grid gap-2">
+                            <button class="btn btn-outline-primary text-start quick-question" data-question="How does the AI matching algorithm work to find the best workers?">
+                                <i class="fas fa-robot me-2"></i>
+                                How matching works
+                            </button>
+                            <button class="btn btn-outline-primary text-start quick-question" data-question="What makes a compelling job posting that attracts quality applicants?">
+                                <i class="fas fa-bullhorn me-2"></i>
+                                Create better job posts
+                            </button>
+                            <button class="btn btn-outline-primary text-start quick-question" data-question="How can I find workers with specific technical skills and experience?">
+                                <i class="fas fa-search me-2"></i>
+                                Find skilled workers
+                            </button>
+                            <button class="btn btn-outline-primary text-start quick-question" data-question="What are the best practices for reviewing applications and selecting candidates?">
+                                <i class="fas fa-users me-2"></i>
+                                Review applications
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- AI Capabilities -->
+        <div class="card mt-4">
+            <div class="card-header bg-light">
+                <h6 class="mb-0 text-dark">
+                    <i class="fas fa-magic me-2 text-info"></i>What I Can Help With
+                </h6>
+            </div>
+            <div class="card-body">
+                <div class="row text-center">
+                    <div class="col-md-3 mb-3">
+                        <div class="capability-item">
+                            <div class="capability-icon bg-success bg-opacity-10 rounded-circle d-inline-flex align-items-center justify-content-center mb-2" style="width: 60px; height: 60px;">
+                                <i class="fas fa-chart-line fa-lg text-success"></i>
+                            </div>
+                            <h6 class="small">Skill Analysis</h6>
+                            <p class="text-muted smaller">Identify strengths and gaps</p>
+                        </div>
+                    </div>
+                    <div class="col-md-3 mb-3">
+                        <div class="capability-item">
+                            <div class="capability-icon bg-primary bg-opacity-10 rounded-circle d-inline-flex align-items-center justify-content-center mb-2" style="width: 60px; height: 60px;">
+                                <i class="fas fa-briefcase fa-lg text-primary"></i>
+                            </div>
+                            <h6 class="small">Job Matching</h6>
+                            <p class="text-muted smaller">Find perfect opportunities</p>
+                        </div>
+                    </div>
+                    <div class="col-md-3 mb-3">
+                        <div class="capability-item">
+                            <div class="capability-icon bg-warning bg-opacity-10 rounded-circle d-inline-flex align-items-center justify-content-center mb-2" style="width: 60px; height: 60px;">
+                                <i class="fas fa-user-edit fa-lg text-warning"></i>
+                            </div>
+                            <h6 class="small">Profile Tips</h6>
+                            <p class="text-muted smaller">Optimize your presence</p>
+                        </div>
+                    </div>
+                    <div class="col-md-3 mb-3">
+                        <div class="capability-item">
+                            <div class="capability-icon bg-info bg-opacity-10 rounded-circle d-inline-flex align-items-center justify-content-center mb-2" style="width: 60px; height: 60px;">
+                                <i class="fas fa-graduation-cap fa-lg text-info"></i>
+                            </div>
+                            <h6 class="small">Career Advice</h6>
+                            <p class="text-muted smaller">Professional guidance</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.chat-container {
+    background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+}
+
+.message-bubble {
+    border: 1px solid #e4ebe4;
+    position: relative;
+}
+
+.message-bubble.bg-success {
+    border-color: #108a00;
+}
+
+.bot-avatar, .user-avatar {
+    flex-shrink: 0;
+    transition: all 0.3s ease;
+}
+
+.message-bubble:hover + .bot-avatar,
+.message-bubble:hover + .user-avatar {
+    transform: scale(1.1);
+}
+
+.welcome-icon {
+    transition: all 0.3s ease;
+}
+
+.quick-question {
+    transition: all 0.3s ease;
+    border: 1px solid #e4ebe4;
+    padding: 0.75rem 1rem;
+}
+
+.quick-question:hover {
+    transform: translateY(-2px);
+    border-color: #14a800;
+    box-shadow: 0 2px 8px rgba(20, 168, 0, 0.1);
+}
+
+.capability-item {
+    transition: all 0.3s ease;
+    padding: 1rem;
+    border-radius: 8px;
+}
+
+.capability-item:hover {
+    background-color: #f8f9fa;
+    transform: translateY(-2px);
+}
+
+.capability-icon {
+    transition: all 0.3s ease;
+}
+
+.capability-item:hover .capability-icon {
+    transform: scale(1.1);
+}
+
+.smaller {
+    font-size: 0.8rem;
+}
+
+.typing-tips {
+    border-top: 1px solid #e4ebe4;
+    padding-top: 0.75rem;
+}
+
+#id_message {
+    border: 2px solid #e4ebe4;
+    border-radius: 25px;
+    padding: 0.75rem 1.5rem;
+    font-size: 1rem;
+    transition: all 0.3s ease;
+}
+
+#id_message:focus {
+    border-color: #14a800;
+    box-shadow: 0 0 0 3px rgba(20, 168, 0, 0.1);
+}
+
+.input-group-lg > .form-control {
+    border-radius: 25px 0 0 25px;
+}
+
+.input-group-lg > .btn {
+    border-radius: 0 25px 25px 0;
+}
+</style>
+
+<script>
+    // Auto-scroll to bottom of chat
+    const chatMessages = document.getElementById('chatMessages');
+    chatMessages.scrollTop = chatMessages.scrollHeight;
+
+    // Quick question buttons
+    document.querySelectorAll('.quick-question').forEach(button => {
+        button.addEventListener('click', function(e) {
+            e.preventDefault();
+            const question = this.getAttribute('data-question');
+            document.querySelector('#id_message').value = question;
+            document.getElementById('chatForm').dispatchEvent(new Event('submit'));
+        });
+    });
+
+    // Handle form submission with AJAX
+    document.getElementById('chatForm').addEventListener('submit', function(e) {
+        e.preventDefault();
+        const formData = new FormData(this);
+        const message = formData.get('message');
+        
+        if (message.trim()) {
+            // Add user message immediately
+            const userMessageDiv = document.createElement('div');
+            userMessageDiv.className = 'mb-4 text-end';
+            userMessageDiv.innerHTML = `
+                <div class="d-flex justify-content-end align-items-start">
+                    <div class="message-bubble bg-success text-white p-3 rounded-3 shadow-sm" style="max-width: 70%;">
+                        <div class="message-content">${message}</div>
+                        <div class="message-time small text-light mt-2">
+                            <i class="fas fa-clock me-1"></i>Just now
+                        </div>
+                    </div>
+                    <div class="user-avatar bg-primary rounded-circle d-flex align-items-center justify-content-center ms-3" style="width: 40px; height: 40px;">
+                        <i class="fas fa-user text-white"></i>
+                    </div>
+                </div>
+            `;
+            chatMessages.appendChild(userMessageDiv);
+            
+            // Clear input
+            document.querySelector('#id_message').value = '';
+            
+            // Scroll to bottom
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+            
+            // Show typing indicator
+            const typingDiv = document.createElement('div');
+            typingDiv.className = 'mb-4';
+            typingDiv.innerHTML = `
+                <div class="d-flex justify-content-start align-items-start">
+                    <div class="bot-avatar bg-success rounded-circle d-flex align-items-center justify-content-center me-3" style="width: 40px; height: 40px;">
+                        <i class="fas fa-robot text-white"></i>
+                    </div>
+                    <div class="message-bubble bg-white text-dark p-3 rounded-3 shadow-sm" style="max-width: 70%;">
+                        <div class="typing-indicator">
+                            <span></span>
+                            <span></span>
+                            <span></span>
+                        </div>
+                    </div>
+                </div>
+            `;
+            chatMessages.appendChild(typingDiv);
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+
+            // Send to server
+            fetch('{% url "chatbot" %}', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                // Remove typing indicator
+                chatMessages.removeChild(typingDiv);
+                
+                // Add bot response
+                const botMessageDiv = document.createElement('div');
+                botMessageDiv.className = 'mb-4';
+                botMessageDiv.innerHTML = `
+                    <div class="d-flex justify-content-start align-items-start">
+                        <div class="bot-avatar bg-success rounded-circle d-flex align-items-center justify-content-center me-3" style="width: 40px; height: 40px;">
+                            <i class="fas fa-robot text-white"></i>
+                        </div>
+                        <div class="message-bubble bg-white text-dark p-3 rounded-3 shadow-sm" style="max-width: 70%;">
+                            <div class="message-content">${data.response}</div>
+                            <div class="message-time small text-muted mt-2">
+                                <i class="fas fa-clock me-1"></i>Just now
+                            </div>
+                        </div>
+                    </div>
+                `;
+                chatMessages.appendChild(botMessageDiv);
+                chatMessages.scrollTop = chatMessages.scrollHeight;
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                chatMessages.removeChild(typingDiv);
+            });
+        }
+    });
+
+    function clearChat() {
+        if (confirm('Are you sure you want to clear the chat history?')) {
+            fetch('{% url "chatbot" %}', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                },
+                body: 'clear_chat=true'
+            }).then(() => {
+                location.reload();
+            });
+        }
+    }
+</script>
+{% endblock %}

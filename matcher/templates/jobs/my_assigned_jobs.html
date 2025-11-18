@@ -1,0 +1,171 @@
+{% extends 'base.html' %}
+
+{% block title %}My Assigned Jobs{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2 class="text-dark">
+            <i class="fas fa-briefcase me-2 text-success"></i>My Assigned Jobs
+        </h2>
+        <a href="{% url 'my_applications' %}" class="btn btn-outline-success">
+            <i class="fas fa-file-alt me-1"></i>View Applications
+        </a>
+    </div>
+    
+    {% if assigned_jobs %}
+        <div class="row">
+            {% for job_info in assigned_jobs %}
+            <div class="col-md-6 mb-4">
+                <div class="card shadow-sm border-0 rounded-3 h-100">
+                    <div class="card-header bg-transparent border-0 pb-0">
+                        <div class="d-flex justify-content-between align-items-start">
+                            <h5 class="card-title text-dark mb-1">
+                                <a href="{% url 'job_detail' job_info.job.id %}" class="text-decoration-none text-dark">
+                                    {{ job_info.job.title }}
+                                </a>
+                            </h5>
+                            {% if job_info.task %}
+                                <span class="badge 
+                                    {% if job_info.task.status == 'completed' %}bg-success
+                                    {% elif job_info.task.status == 'in_progress' %}bg-warning text-dark
+                                    {% else %}bg-info text-white{% endif %} rounded-pill px-3">
+                                    {{ job_info.task.get_status_display }}
+                                </span>
+                            {% endif %}
+                        </div>
+                        <p class="text-muted small mb-2">
+                            <i class="fas fa-user-tie me-1 text-success"></i>{{ job_info.job.employer.user.username }}
+                        </p>
+                    </div>
+                    
+                    <div class="card-body pt-2">
+                        <p class="card-text text-muted mb-3">
+                            {{ job_info.job.description|truncatewords:30 }}
+                        </p>
+                        
+                        <div class="row g-2 small text-muted mb-4">
+                            <div class="col-6">
+                                <i class="fas fa-map-marker-alt me-1 text-success"></i>
+                                {{ job_info.job.location }}
+                            </div>
+                            <div class="col-6">
+                                <i class="fas fa-dollar-sign me-1 text-success"></i>
+                                ${{ job_info.job.budget }}
+                            </div>
+                            <div class="col-6">
+                                <i class="fas fa-calendar me-1 text-success"></i>
+                                Assigned {{ job_info.job.created_at|date:"M d" }}
+                            </div>
+                            <div class="col-6">
+                                <i class="fas fa-clock me-1 text-success"></i>
+                                {% if job_info.task %}
+                                    {{ job_info.task.assigned_date|timesince }} ago
+                                {% endif %}
+                            </div>
+                        </div>
+
+                        {% if job_info.task %}
+                            <div class="alert 
+                                {% if job_info.task.status == 'completed' %}alert-success bg-light-success
+                                {% elif job_info.task.status == 'in_progress' %}alert-warning bg-light-warning
+                                {% else %}alert-info bg-light-info{% endif %} border-0 rounded-3">
+                                <div class="d-flex align-items-center">
+                                    <i class="fas 
+                                        {% if job_info.task.status == 'completed' %}fa-check-circle
+                                        {% elif job_info.task.status == 'in_progress' %}fa-spinner
+                                        {% else %}fa-tasks{% endif %} 
+                                        fa-lg me-3 
+                                        {% if job_info.task.status == 'completed' %}text-success
+                                        {% elif job_info.task.status == 'in_progress' %}text-warning
+                                        {% else %}text-info{% endif %}">
+                                    </i>
+                                    <div class="flex-grow-1">
+                                        <strong class="d-block 
+                                            {% if job_info.task.status == 'completed' %}text-success
+                                            {% elif job_info.task.status == 'in_progress' %}text-warning
+                                            {% else %}text-info{% endif %}">
+                                            Task Status: {{ job_info.task.get_status_display }}
+                                        </strong>
+                                        {% if job_info.task.status == 'assigned' %}
+                                            <p class="mb-2 text-dark">Ready to start working on this task.</p>
+                                            <a href="{% url 'mark_task_completed' job_info.task.id %}" class="btn btn-success btn-sm">
+                                                <i class="fas fa-check-circle me-1"></i>Mark as Completed
+                                            </a>
+                                        {% elif job_info.task.status == 'in_progress' %}
+                                            <p class="mb-2 text-dark">You're currently working on this task.</p>
+                                            <a href="{% url 'mark_task_completed' job_info.task.id %}" class="btn btn-success btn-sm">
+                                                <i class="fas fa-flag-checkered me-1"></i>Mark as Completed
+                                            </a>
+                                        {% elif job_info.task.status == 'completed' %}
+                                            <p class="mb-0 text-dark">Great job! This task has been completed and is awaiting employer approval.</p>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            </div>
+                        {% else %}
+                            <div class="alert alert-warning bg-light-warning border-0 rounded-3">
+                                <div class="d-flex align-items-center">
+                                    <i class="fas fa-exclamation-triangle fa-lg me-3 text-warning"></i>
+                                    <div>
+                                        <strong class="d-block text-warning">Action Required</strong>
+                                        <p class="mb-0 text-dark">No task record created yet. Please contact the employer to get started.</p>
+                                    </div>
+                                </div>
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    {% else %}
+        <div class="card shadow-sm border-0 rounded-3">
+            <div class="card-body text-center py-5">
+                <i class="fas fa-briefcase fa-4x text-muted mb-4"></i>
+                <h3 class="text-muted mb-3">No Assigned Jobs</h3>
+                <p class="text-muted mb-4">You don't have any assigned jobs yet. Keep applying to get hired for your next opportunity.</p>
+                <div class="d-flex justify-content-center gap-3">
+                    <a href="{% url 'job_search' %}" class="btn btn-success btn-lg">
+                        <i class="fas fa-search me-2"></i>Browse Jobs
+                    </a>
+                    <a href="{% url 'my_applications' %}" class="btn btn-outline-success btn-lg">
+                        <i class="fas fa-file-alt me-2"></i>View Applications
+                    </a>
+                </div>
+            </div>
+        </div>
+    {% endif %}
+</div>
+
+<style>
+.card {
+    transition: transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
+}
+
+.card:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 8px 25px rgba(25, 135, 84, 0.15) !important;
+}
+
+.rounded-3 {
+    border-radius: 12px !important;
+}
+
+.bg-light-success {
+    background-color: rgba(25, 135, 84, 0.05) !important;
+}
+
+.bg-light-warning {
+    background-color: rgba(255, 193, 7, 0.05) !important;
+}
+
+.bg-light-info {
+    background-color: rgba(13, 202, 240, 0.05) !important;
+}
+
+.bg-light-danger {
+    background-color: rgba(220, 53, 69, 0.05) !important;
+}
+</style>
+{% endblock %}

@@ -1,0 +1,360 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <!-- Header Section -->
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <div>
+                <h2 class="text-dark mb-1">
+                    <i class="fas fa-building me-2 text-success"></i>Employer Dashboard
+                </h2>
+                <p class="text-muted mb-0">Manage your job posts and find talented workers</p>
+            </div>
+            <a href="{% url 'job_create' %}" class="btn btn-success">
+                <i class="fas fa-plus me-1"></i>Post New Job
+            </a>
+        </div>
+        
+        <!-- Stats Cards -->
+        <div class="row mb-4">
+            <div class="col-xl-4 col-md-6 mb-4">
+                <div class="card stats-card border-left-primary">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div>
+                                <div class="stat-number text-primary">{{ jobs.count }}</div>
+                                <div class="stat-label">Total Jobs Posted</div>
+                            </div>
+                            <div class="stat-icon bg-primary bg-opacity-10 rounded-circle d-flex align-items-center justify-content-center" style="width: 50px; height: 50px;">
+                                <i class="fas fa-briefcase text-primary fa-lg"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="col-xl-4 col-md-6 mb-4">
+                <div class="card stats-card border-left-success">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div>
+                                <div class="stat-number text-success">{{ active_jobs }}</div>
+                                <div class="stat-label">Active Jobs</div>
+                            </div>
+                            <div class="stat-icon bg-success bg-opacity-10 rounded-circle d-flex align-items-center justify-content-center" style="width: 50px; height: 50px;">
+                                <i class="fas fa-bullseye text-success fa-lg"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="col-xl-4 col-md-6 mb-4">
+                <div class="card stats-card border-left-info">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div>
+                                <div class="stat-number text-info">{{ completed_jobs }}</div>
+                                <div class="stat-label">Completed Jobs</div>
+                            </div>
+                            <div class="stat-icon bg-info bg-opacity-10 rounded-circle d-flex align-items-center justify-content-center" style="width: 50px; height: 50px;">
+                                <i class="fas fa-check-circle text-info fa-lg"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Main Content -->
+        <div class="row">
+            <!-- Job Requests -->
+            <div class="col-lg-8 mb-4">
+                <div class="card h-100">
+                    <div class="card-header bg-light d-flex justify-content-between align-items-center">
+                        <h5 class="mb-0 text-dark">
+                            <i class="fas fa-list me-2 text-primary"></i>Your Job Posts
+                        </h5>
+                        <a href="{% url 'job_create' %}" class="btn btn-sm btn-success">
+                            <i class="fas fa-plus me-1"></i>New Job
+                        </a>
+                    </div>
+                    <div class="card-body">
+                        {% if jobs %}
+                            {% for job in jobs %}
+                            <div class="job-card border rounded p-3 mb-3">
+                                <div class="row align-items-center">
+                                    <div class="col-md-8">
+                                        <div class="d-flex align-items-center mb-2">
+                                            <h6 class="mb-0 me-3 text-dark">{{ job.title }}</h6>
+                                            <span class="badge bg-{% if job.status == 'open' %}success{% elif job.status == 'in_progress' %}warning{% else %}secondary{% endif %}">
+                                                {{ job.get_status_display }}
+                                            </span>
+                                        </div>
+                                        <p class="text-muted mb-2 small">{{ job.description|truncatewords:25 }}</p>
+                                        <div class="job-meta small">
+                                            <span class="me-3">
+                                                <i class="fas fa-map-marker-alt me-1 text-muted"></i>{{ job.location }}
+                                            </span>
+                                            <span class="me-3">
+                                                KSH{{ job.budget }}
+                                            </span>
+                                            <span>
+                                                <i class="fas fa-users me-1 text-muted"></i>{{ job.get_applicants_count }} applicants
+                                            </span>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-4 text-end">
+                                        <div class="mb-3">
+                                            <div class="text-success fw-bold">KSH{{ job.budget }}</div>
+                                            <small class="text-muted">Budget</small>
+                                        </div>
+                                        <div class="btn-group-vertical w-100">
+                                            <a href="{% url 'job_detail' job.id %}" class="btn btn-sm btn-outline-success mb-1">View Details</a>
+                                            {% if job.jobapplication_set.count > 0 %}
+                                            <a href="{% url 'manage_applications' job.id %}" class="btn btn-sm btn-primary">
+                                                <i class="fas fa-inbox me-1"></i>Applications ({{ job.jobapplication_set.count }})
+                                            </a>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            {% endfor %}
+                        {% else %}
+                            <div class="text-center py-5">
+                                <i class="fas fa-briefcase fa-3x text-muted mb-3"></i>
+                                <h5 class="text-muted">No Jobs Posted Yet</h5>
+                                <p class="text-muted mb-4">Start by posting your first job to find talented workers</p>
+                                <a href="{% url 'job_create' %}" class="btn btn-success">
+                                    <i class="fas fa-plus me-1"></i>Post Your First Job
+                                </a>
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+
+            <!-- Sidebar -->
+            <div class="col-lg-4 mb-4">
+                <!-- Pending Applications -->
+                <div class="card mb-4">
+                    <div class="card-header bg-light">
+                        <h5 class="mb-0 text-dark">
+                            <i class="fas fa-inbox me-2 text-warning"></i>Pending Applications
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        {% with pending_apps_count=0 %}
+                        {% for job in jobs %}
+                            {% if job.jobapplication_set.count > 0 %}
+                            {% with pending_apps_count=pending_apps_count|add:job.jobapplication_set.count %}
+                            <div class="application-alert border-start border-warning border-3 ps-3 py-2 mb-3">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <div>
+                                        <h6 class="mb-1 small">{{ job.title }}</h6>
+                                        <small class="text-muted">{{ job.jobapplication_set.count }} new applications</small>
+                                    </div>
+                                    <a href="{% url 'manage_applications' job.id %}" class="btn btn-sm btn-outline-warning">
+                                        Review
+                                    </a>
+                                </div>
+                            </div>
+                            {% endwith %}
+                            {% endif %}
+                        {% empty %}
+                        <div class="text-center py-3">
+                            <i class="fas fa-inbox fa-2x text-muted mb-2"></i>
+                            <p class="text-muted mb-0">No pending applications</p>
+                        </div>
+                        {% endfor %}
+                        {% endwith %}
+                    </div>
+                </div>
+
+                <!-- Quick Actions -->
+                <div class="card mb-4">
+                    <div class="card-header bg-light">
+                        <h5 class="mb-0 text-dark">
+                            <i class="fas fa-bolt me-2 text-success"></i>Quick Actions
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="d-grid gap-2">
+                            <a href="{% url 'job_create' %}" class="btn btn-outline-success text-start">
+                                <i class="fas fa-plus me-2"></i>Post New Job
+                            </a>
+                            <a href="{% url 'worker_directory' %}" class="btn btn-outline-primary text-start">
+                                <i class="fas fa-search me-2"></i>Find Talent
+                            </a>
+                            <a href="{% url 'employer_approvals' %}" class="btn btn-outline-info text-start">
+                                <i class="fas fa-check-circle me-2"></i>Review Work
+                            </a>
+                            <a href="#" class="btn btn-outline-warning text-start">
+                                <i class="fas fa-chart-bar me-2"></i>View Analytics
+                            </a>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Platform Tips -->
+                <div class="card">
+                    <div class="card-header bg-light">
+                        <h5 class="mb-0 text-dark">
+                            <i class="fas fa-lightbulb me-2 text-warning"></i>Tips for Success
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="tip-item small border-bottom pb-2 mb-2">
+                            <div class="text-success">
+                                <i class="fas fa-check-circle me-1"></i>
+                                <strong>Clear Job Descriptions</strong>
+                            </div>
+                            <small class="text-muted">Detailed descriptions attract better candidates</small>
+                        </div>
+                        <div class="tip-item small border-bottom pb-2 mb-2">
+                            <div class="text-success">
+                                <i class="fas fa-check-circle me-1"></i>
+                                <strong>Competitive Budgets</strong>
+                            </div>
+                            <small class="text-muted">Fair pricing gets more quality applications</small>
+                        </div>
+                        <div class="tip-item small">
+                            <div class="text-success">
+                                <i class="fas fa-check-circle me-1"></i>
+                                <strong>Quick Responses</strong>
+                            </div>
+                            <small class="text-muted">Respond to applications within 24 hours</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Recent Activity -->
+        <div class="card">
+            <div class="card-header bg-light">
+                <h5 class="mb-0 text-dark">
+                    <i class="fas fa-history me-2 text-info"></i>Recent Activity
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <h6 class="text-muted mb-3">Recent Applications</h6>
+                        {% for job in jobs|slice:":3" %}
+                            {% if job.jobapplication_set.count > 0 %}
+                            <div class="activity-item small py-2 border-bottom">
+                                <div class="text-primary">
+                                    <i class="fas fa-user-plus me-1"></i>New applications for
+                                </div>
+                                <strong>{{ job.title }}</strong>
+                                <div class="text-muted">{{ job.jobapplication_set.count }} applicants</div>
+                            </div>
+                            {% endif %}
+                        {% empty %}
+                        <p class="text-muted small">No recent applications</p>
+                        {% endfor %}
+                    </div>
+                    <div class="col-md-6">
+                        <h6 class="text-muted mb-3">Job Status Updates</h6>
+                        {% for job in jobs|slice:":3" %}
+                        <div class="activity-item small py-2 border-bottom">
+                            <div class="text-success">
+                                <i class="fas fa-briefcase me-1"></i>{{ job.title }}
+                            </div>
+                            <span class="badge bg-{% if job.status == 'open' %}success{% elif job.status == 'in_progress' %}warning{% else %}secondary{% endif %}">
+                                {{ job.get_status_display }}
+                            </span>
+                            <div class="text-muted">Posted {{ job.created_at|timesince }} ago</div>
+                        </div>
+                        {% empty %}
+                        <p class="text-muted small">No job updates</p>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.stats-card {
+    transition: all 0.3s ease;
+    border-left: 4px solid !important;
+}
+
+.stats-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+}
+
+.stat-number {
+    font-size: 2rem;
+    font-weight: bold;
+    line-height: 1;
+}
+
+.stat-label {
+    font-size: 0.85rem;
+    color: #5e6d55;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-top: 0.25rem;
+}
+
+.stat-icon {
+    transition: all 0.3s ease;
+}
+
+.stats-card:hover .stat-icon {
+    transform: scale(1.1);
+}
+
+.job-card {
+    transition: all 0.3s ease;
+    border: 1px solid #e4ebe4 !important;
+}
+
+.job-card:hover {
+    border-color: #14a800 !important;
+    box-shadow: 0 2px 8px rgba(20, 168, 0, 0.1);
+}
+
+.application-alert {
+    background-color: #fffbf0;
+    border-radius: 4px;
+}
+
+.border-left-primary { border-left-color: #007bff !important; }
+.border-left-success { border-left-color: #14a800 !important; }
+.border-left-info { border-left-color: #17a2b8 !important; }
+
+.job-meta {
+    color: #5e6d55;
+}
+
+.tip-item {
+    transition: all 0.3s ease;
+}
+
+.tip-item:hover {
+    background-color: #f8f9fa;
+    border-radius: 4px;
+    padding-left: 0.5rem;
+    padding-right: 0.5rem;
+}
+
+.activity-item {
+    transition: all 0.3s ease;
+}
+
+.activity-item:hover {
+    background-color: #f8f9fa;
+    border-radius: 4px;
+    padding-left: 0.5rem !important;
+    padding-right: 0.5rem !important;
+}
+</style>
+{% endblock %}

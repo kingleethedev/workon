@@ -1,0 +1,577 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block extra_css %}
+<style>
+:root {
+    --upwork-green: #14a800;
+    --upwork-green-light: #e6f7e6;
+    --upwork-green-dark: #0d7300;
+    --upwork-gray: #f7f7f7;
+    --upwork-border: #e4e4e4;
+}
+
+.application-card {
+    border: none;
+    border-radius: 16px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+    overflow: hidden;
+}
+
+.job-summary-card {
+    background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+    border: none;
+    border-radius: 12px;
+    border-left: 4px solid var(--upwork-green);
+}
+
+.form-control, .form-select {
+    border: 2px solid var(--upwork-border);
+    border-radius: 8px;
+    padding: 12px 16px;
+    transition: all 0.3s ease;
+}
+
+.form-control:focus, .form-select:focus {
+    border-color: var(--upwork-green);
+    box-shadow: 0 0 0 0.2rem rgba(20, 168, 0, 0.15);
+}
+
+.upload-area {
+    border: 2px dashed var(--upwork-border);
+    border-radius: 12px;
+    padding: 40px 20px;
+    text-align: center;
+    background: var(--upwork-gray);
+    transition: all 0.3s ease;
+    cursor: pointer;
+}
+
+.upload-area:hover {
+    border-color: var(--upwork-green);
+    background: var(--upwork-green-light);
+}
+
+.upload-area.dragover {
+    border-color: var(--upwork-green);
+    background: var(--upwork-green-light);
+    transform: scale(1.02);
+}
+
+.skill-tag {
+    display: inline-flex;
+    align-items: center;
+    background: var(--upwork-green-light);
+    color: var(--upwork-green-dark);
+    padding: 6px 12px;
+    border-radius: 20px;
+    font-size: 0.875rem;
+    font-weight: 500;
+    margin: 4px;
+}
+
+.profile-preview {
+    background: white;
+    border-radius: 12px;
+    padding: 20px;
+    border: 2px solid var(--upwork-border);
+}
+
+.metric-value {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: var(--upwork-green);
+}
+
+.progress-ring {
+    width: 80px;
+    height: 80px;
+}
+
+.character-counter {
+    font-size: 0.875rem;
+    color: #6b7280;
+}
+
+.fade-in {
+    animation: fadeInUp 0.6s ease-out;
+}
+
+@keyframes fadeInUp {
+    from {
+        opacity: 0;
+        transform: translateY(30px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.hover-lift {
+    transition: transform 0.2s ease;
+}
+
+.hover-lift:hover {
+    transform: translateY(-2px);
+}
+
+.btn-primary {
+    background: linear-gradient(135deg, var(--upwork-green), #22c55e);
+    border: none;
+    border-radius: 8px;
+    padding: 12px 30px;
+    font-weight: 600;
+    transition: all 0.3s ease;
+}
+
+.btn-primary:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 15px rgba(20, 168, 0, 0.3);
+}
+
+.required-field::after {
+    content: " *";
+    color: #dc3545;
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center fade-in">
+    <div class="col-lg-10">
+        <div class="application-card card">
+            <!-- Header -->
+            <div class="card-header bg-white py-4">
+                <div class="d-flex align-items-center justify-content-between">
+                    <div>
+                        <h1 class="h3 mb-2 text-dark">
+                            <i class="fas fa-paper-plane me-3 text-primary"></i>Apply for Job
+                        </h1>
+                        <p class="text-muted mb-0">Submit your application to get hired for this project</p>
+                    </div>
+                    <div class="text-end">
+                        <div class="text-muted small">Application Fee</div>
+                        <div class="h5 text-success mb-0">Free</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card-body p-4">
+                <div class="row">
+                    <!-- Main Form -->
+                    <div class="col-lg-8">
+                        <!-- Job Summary -->
+                        <div class="job-summary-card card mb-4">
+                            <div class="card-body">
+                                <div class="row align-items-center">
+                                    <div class="col-md-8">
+                                        <h4 class="text-dark mb-2">{{ job.title }}</h4>
+                                        <p class="text-muted mb-3">{{ job.description|truncatewords:40 }}</p>
+                                        <div class="row g-3">
+                                            <div class="col-sm-6">
+                                                <div class="d-flex align-items-center text-muted">
+                                                    <i class="fas fa-map-marker-alt me-2"></i>
+                                                    <span>{{ job.location }}</span>
+                                                </div>
+                                            </div>
+                                            <div class="col-sm-6">
+                                                <div class="d-flex align-items-center text-muted">
+                                                    <i class="fas fa-dollar-sign me-2"></i>
+                                                    <span class="text-success fw-bold">${{ job.budget }}</span>
+                                                </div>
+                                            </div>
+                                            <div class="col-sm-6">
+                                                <div class="d-flex align-items-center text-muted">
+                                                    <i class="fas fa-user-tie me-2"></i>
+                                                    <span>{{ job.employer.user.get_full_name|default:job.employer.user.username }}</span>
+                                                </div>
+                                            </div>
+                                            <div class="col-sm-6">
+                                                <div class="d-flex align-items-center text-muted">
+                                                    <i class="fas fa-clock me-2"></i>
+                                                    <span>Posted {{ job.created_at|timesince }} ago</span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-4 text-center">
+                                        <div class="bg-primary bg-opacity-10 p-3 rounded-3">
+                                            <i class="fas fa-briefcase fa-3x text-primary mb-2"></i>
+                                            <div class="fw-bold text-dark">Immediate Start</div>
+                                            <small class="text-muted">Available now</small>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Application Form -->
+                        <form method="post" id="applicationForm" enctype="multipart/form-data">
+                            {% csrf_token %}
+                            
+                            <!-- Cover Letter -->
+                            <div class="card mb-4">
+                                <div class="card-header bg-light py-3">
+                                    <h5 class="mb-0">
+                                        <i class="fas fa-file-alt me-2 text-primary"></i>
+                                        Cover Letter
+                                        <span class="required-field"></span>
+                                    </h5>
+                                </div>
+                                <div class="card-body">
+                                    <div class="mb-3">
+                                        <label for="{{ form.cover_letter.id_for_label }}" class="form-label fw-bold">
+                                            Why are you the right fit for this job?
+                                        </label>
+                                        {{ form.cover_letter }}
+                                        <div class="character-counter mt-2">
+                                            <span id="charCount">0</span> characters (minimum 100)
+                                        </div>
+                                        {% if form.cover_letter.help_text %}
+                                        <div class="form-text text-muted">
+                                            <i class="fas fa-lightbulb me-1"></i>
+                                            {{ form.cover_letter.help_text }}
+                                        </div>
+                                        {% endif %}
+                                        {% if form.cover_letter.errors %}
+                                        <div class="text-danger mt-2">
+                                            {% for error in form.cover_letter.errors %}
+                                            <small><i class="fas fa-exclamation-circle me-1"></i>{{ error }}</small>
+                                            {% endfor %}
+                                        </div>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Proposed Terms -->
+                            <div class="card mb-4">
+                                <div class="card-header bg-light py-3">
+                                    <h5 class="mb-0">
+                                        <i class="fas fa-handshake me-2 text-primary"></i>
+                                        Proposed Terms
+                                    </h5>
+                                </div>
+                                <div class="card-body">
+                                    <div class="row g-3">
+                                        <div class="col-md-6">
+                                            <label for="{{ form.proposed_amount.id_for_label }}" class="form-label fw-bold">
+                                                Proposed Amount ($)
+                                            </label>
+                                            {{ form.proposed_amount }}
+                                            <div class="form-text">
+                                                Your bid: $<span id="proposedAmountDisplay">0</span>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <label for="{{ form.estimated_days.id_for_label }}" class="form-label fw-bold">
+                                                Estimated Timeline (Days)
+                                            </label>
+                                            {{ form.estimated_days }}
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- File Attachments -->
+                            <div class="card mb-4">
+                                <div class="card-header bg-light py-3">
+                                    <h5 class="mb-0">
+                                        <i class="fas fa-paperclip me-2 text-primary"></i>
+                                        Attachments (Optional)
+                                    </h5>
+                                </div>
+                                <div class="card-body">
+                                    <div class="upload-area" id="uploadArea">
+                                        <i class="fas fa-cloud-upload-alt fa-3x text-muted mb-3"></i>
+                                        <h5 class="text-muted">Drop your files here or click to browse</h5>
+                                        <p class="text-muted small mb-3">Supports PDF, DOC, DOCX, JPG, PNG (Max 10MB)</p>
+                                        {{ form.attachments }}
+                                        <div class="file-preview mt-3" id="filePreview"></div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Additional Questions -->
+                            {% for field in form %}
+                                {% if field.name not in 'cover_letter,proposed_amount,estimated_days,attachments' %}
+                                <div class="card mb-4">
+                                    <div class="card-header bg-light py-3">
+                                        <h5 class="mb-0">
+                                            <i class="fas fa-question-circle me-2 text-primary"></i>
+                                            {{ field.label }}
+                                            {% if field.field.required %}<span class="required-field"></span>{% endif %}
+                                        </h5>
+                                    </div>
+                                    <div class="card-body">
+                                        <div class="mb-3">
+                                            {{ field }}
+                                            {% if field.help_text %}
+                                            <div class="form-text text-muted">
+                                                <i class="fas fa-info-circle me-1"></i>
+                                                {{ field.help_text }}
+                                            </div>
+                                            {% endif %}
+                                            {% if field.errors %}
+                                            <div class="text-danger mt-2">
+                                                {% for error in field.errors %}
+                                                <small><i class="fas fa-exclamation-circle me-1"></i>{{ error }}</small>
+                                                {% endfor %}
+                                            </div>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                </div>
+                                {% endif %}
+                            {% endfor %}
+
+                            <!-- Action Buttons -->
+                            <div class="d-flex gap-3 mt-4">
+                                <button type="submit" class="btn btn-primary btn-lg flex-fill hover-lift">
+                                    <i class="fas fa-paper-plane me-2"></i>Submit Application
+                                </button>
+                                <a href="{% url 'job_detail' job.id %}" class="btn btn-outline-secondary btn-lg">
+                                    <i class="fas fa-arrow-left me-2"></i>Cancel
+                                </a>
+                            </div>
+
+                            <div class="alert alert-info mt-4">
+                                <div class="d-flex align-items-center">
+                                    <i class="fas fa-shield-alt fa-2x me-3 text-primary"></i>
+                                    <div>
+                                        <strong>Secure Application</strong>
+                                        <p class="mb-0 small">Your application and profile information are protected and only shared with the employer for this job posting.</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </form>
+                    </div>
+
+                    <!-- Sidebar -->
+                    <div class="col-lg-4">
+                        <!-- Profile Preview -->
+                        <div class="card mb-4">
+                            <div class="card-header bg-light py-3">
+                                <h5 class="mb-0">
+                                    <i class="fas fa-user-circle me-2 text-primary"></i>
+                                    Your Profile Preview
+                                </h5>
+                            </div>
+                            <div class="card-body">
+                                <div class="text-center mb-4">
+                                    <img src="{{ user.worker.profile_picture.url|default:'/static/images/default-avatar.png' }}" 
+                                         alt="Profile" class="rounded-circle mb-3" width="80" height="80">
+                                    <h5 class="mb-1">{{ user.get_full_name|default:user.username }}</h5>
+                                    <p class="text-muted mb-3">{{ user.worker.title|default:"Professional Worker" }}</p>
+                                </div>
+
+                                <!-- Reliability Score -->
+                                <div class="text-center mb-4">
+                                    <div class="progress-ring mb-2">
+                                        <svg width="80" height="80" viewBox="0 0 36 36">
+                                            <path d="M18 2.0845
+                                                    a 15.9155 15.9155 0 0 1 0 31.831
+                                                    a 15.9155 15.9155 0 0 1 0 -31.831"
+                                                fill="none" stroke="#e6e6e6" stroke-width="3"/>
+                                            <path d="M18 2.0845
+                                                    a 15.9155 15.9155 0 0 1 0 31.831
+                                                    a 15.9155 15.9155 0 0 1 0 -31.831"
+                                                fill="none" stroke="#14a800" stroke-width="3" 
+                                                stroke-dasharray="{{ user.worker.reliability_score }}, 100"/>
+                                            <text x="18" y="20.35" class="percentage" text-anchor="middle" 
+                                                  fill="#14a800" font-size="8">{{ user.worker.reliability_score }}%</text>
+                                        </svg>
+                                    </div>
+                                    <div class="fw-bold text-dark">Reliability Score</div>
+                                    <small class="text-muted">Based on completed jobs</small>
+                                </div>
+
+                                <!-- Skills -->
+                                <div class="mb-3">
+                                    <h6 class="text-muted mb-2">Top Skills</h6>
+                                    <div id="skillsContainer">
+                                        {% for skill in user.worker.skills.all|slice:":8" %}
+                                        <span class="skill-tag">
+                                            <i class="fas fa-check me-1 small"></i>{{ skill.name }}
+                                        </span>
+                                        {% endfor %}
+                                    </div>
+                                </div>
+
+                                <!-- Stats -->
+                                <div class="row text-center g-3">
+                                    <div class="col-4">
+                                        <div class="metric-value">{{ user.worker.completed_jobs_count }}</div>
+                                        <small class="text-muted">Jobs Done</small>
+                                    </div>
+                                    <div class="col-4">
+                                        <div class="metric-value">{% if user.worker.average_rating %}{{ user.worker.average_rating }}/5{% else %}New{% endif %}</div>
+                                        <small class="text-muted">Rating</small>
+                                    </div>
+                                    <div class="col-4">
+                                        <div class="metric-value">{{ user.worker.response_time|default:24 }}h</div>
+                                        <small class="text-muted">Response</small>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Application Tips -->
+                        <div class="card">
+                            <div class="card-header bg-light py-3">
+                                <h5 class="mb-0">
+                                    <i class="fas fa-lightbulb me-2 text-warning"></i>
+                                    Application Tips
+                                </h5>
+                            </div>
+                            <div class="card-body">
+                                <div class="mb-3">
+                                    <div class="d-flex align-items-start mb-3">
+                                        <i class="fas fa-edit text-primary me-2 mt-1"></i>
+                                        <div>
+                                            <strong>Customize Your Cover Letter</strong>
+                                            <p class="small text-muted mb-0">Explain why you're perfect for this specific job</p>
+                                        </div>
+                                    </div>
+                                    <div class="d-flex align-items-start mb-3">
+                                        <i class="fas fa-dollar-sign text-success me-2 mt-1"></i>
+                                        <div>
+                                            <strong>Competitive Pricing</strong>
+                                            <p class="small text-muted mb-0">Research similar jobs for fair pricing</p>
+                                        </div>
+                                    </div>
+                                    <div class="d-flex align-items-start mb-3">
+                                        <i class="fas fa-clock text-info me-2 mt-1"></i>
+                                        <div>
+                                            <strong>Realistic Timeline</strong>
+                                            <p class="small text-muted mb-0">Set achievable deadlines you can meet</p>
+                                        </div>
+                                    </div>
+                                    <div class="d-flex align-items-start">
+                                        <i class="fas fa-portfolio text-warning me-2 mt-1"></i>
+                                        <div>
+                                            <strong>Showcase Relevant Work</strong>
+                                            <p class="small text-muted mb-0">Attach files that demonstrate your skills</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Character counter for cover letter
+    const coverLetter = document.getElementById('{{ form.cover_letter.id_for_label }}');
+    const charCount = document.getElementById('charCount');
+    
+    if (coverLetter && charCount) {
+        coverLetter.addEventListener('input', function() {
+            charCount.textContent = this.value.length;
+            if (this.value.length < 100) {
+                charCount.classList.add('text-danger');
+                charCount.classList.remove('text-success');
+            } else {
+                charCount.classList.remove('text-danger');
+                charCount.classList.add('text-success');
+            }
+        });
+        
+        // Initialize count
+        charCount.textContent = coverLetter.value.length;
+    }
+
+    // Proposed amount display
+    const proposedAmount = document.getElementById('{{ form.proposed_amount.id_for_label }}');
+    const amountDisplay = document.getElementById('proposedAmountDisplay');
+    
+    if (proposedAmount && amountDisplay) {
+        proposedAmount.addEventListener('input', function() {
+            amountDisplay.textContent = this.value || '0';
+        });
+        
+        // Initialize display
+        amountDisplay.textContent = proposedAmount.value || '0';
+    }
+
+    // File upload handling
+    const uploadArea = document.getElementById('uploadArea');
+    const fileInput = document.getElementById('{{ form.attachments.id_for_label }}');
+    const filePreview = document.getElementById('filePreview');
+
+    if (uploadArea && fileInput) {
+        uploadArea.addEventListener('click', () => fileInput.click());
+        
+        uploadArea.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            uploadArea.classList.add('dragover');
+        });
+        
+        uploadArea.addEventListener('dragleave', () => {
+            uploadArea.classList.remove('dragover');
+        });
+        
+        uploadArea.addEventListener('drop', (e) => {
+            e.preventDefault();
+            uploadArea.classList.remove('dragover');
+            fileInput.files = e.dataTransfer.files;
+            updateFilePreview();
+        });
+        
+        fileInput.addEventListener('change', updateFilePreview);
+    }
+
+    function updateFilePreview() {
+        if (fileInput.files.length > 0) {
+            filePreview.innerHTML = '';
+            Array.from(fileInput.files).forEach(file => {
+                const fileElement = document.createElement('div');
+                fileElement.className = 'alert alert-success py-2 mb-2';
+                fileElement.innerHTML = `
+                    <div class="d-flex align-items-center">
+                        <i class="fas fa-file me-2"></i>
+                        <div class="flex-grow-1">
+                            <strong>${file.name}</strong>
+                            <div class="small">${(file.size / 1024 / 1024).toFixed(2)} MB</div>
+                        </div>
+                        <button type="button" class="btn-close" onclick="removeFile(this)"></button>
+                    </div>
+                `;
+                filePreview.appendChild(fileElement);
+            });
+        }
+    }
+
+    window.removeFile = function(button) {
+        button.closest('.alert').remove();
+        // Note: This doesn't actually remove the file from the input,
+        // you'd need a more complex solution for that
+    };
+
+    // Form validation
+    const form = document.getElementById('applicationForm');
+    form.addEventListener('submit', function(e) {
+        let isValid = true;
+        const coverLetter = document.getElementById('{{ form.cover_letter.id_for_label }}');
+        
+        if (coverLetter && coverLetter.value.length < 100) {
+            isValid = false;
+            coverLetter.focus();
+            alert('Please write a cover letter with at least 100 characters.');
+        }
+        
+        if (!isValid) {
+            e.preventDefault();
+        }
+    });
+});
+</script>
+{% endblock %}

@@ -1,0 +1,406 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-4">
+        <!-- Profile Card -->
+        <div class="card">
+            <div class="card-header bg-light">
+                <h5 class="mb-0 text-dark">
+                    <i class="fas fa-user-circle me-2 text-success"></i>Your Profile
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="text-center mb-3">
+                    <div class="bg-success rounded-circle d-inline-flex align-items-center justify-content-center mb-2" style="width: 60px; height: 60px;">
+                        <i class="fas fa-user text-white fs-4"></i>
+                    </div>
+                    <h6 class="mb-1">{{ user.get_full_name|default:user.username }}</h6>
+                    <span class="badge bg-success">{{ profile.get_user_type_display }}</span>
+                </div>
+                
+                <div class="profile-stats">
+                    <div class="d-flex justify-content-between align-items-center py-2 border-bottom">
+                        <span class="text-muted">Status</span>
+                        <span class="badge bg-{% if profile.is_approved %}success{% else %}warning{% endif %}">
+                            {% if profile.is_approved %}Verified{% else %}Pending{% endif %}
+                        </span>
+                    </div>
+                    <div class="d-flex justify-content-between align-items-center py-2 border-bottom">
+                        <span class="text-muted">Location</span>
+                        <span class="fw-bold">{{ profile.location }}</span>
+                    </div>
+                    <div class="d-flex justify-content-between align-items-center py-2 border-bottom">
+                        <span class="text-muted">Rating</span>
+                        <div>
+                            <span class="text-warning">
+                                {% for i in "12345" %}
+                                    {% if forloop.counter <= average_rating %}
+                                        <i class="fas fa-star"></i>
+                                    {% else %}
+                                        <i class="far fa-star"></i>
+                                    {% endif %}
+                                {% endfor %}
+                            </span>
+                            <small class="text-muted">({{ average_rating|floatformat:1 }})</small>
+                        </div>
+                    </div>
+                    <div class="d-flex justify-content-between align-items-center py-2">
+                        <span class="text-muted">Reliability</span>
+                        <span class="fw-bold text-success">{{ profile.reliability_score|floatformat:1 }}/5.0</span>
+                    </div>
+                </div>
+                
+                <div class="d-grid gap-2 mt-3">
+                    <a href="{% url 'profile_edit' %}" class="btn btn-success">
+                        <i class="fas fa-edit me-1"></i>Edit Profile
+                    </a>
+                    <a href="{% url 'skill_analysis' %}" class="btn btn-outline-success">
+                        <i class="fas fa-chart-line me-1"></i>Skill Analysis
+                    </a>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Quick Stats -->
+        <div class="card mt-4">
+            <div class="card-header bg-light">
+                <h5 class="mb-0 text-dark">
+                    <i class="fas fa-chart-bar me-2 text-success"></i>Your Stats
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="row text-center g-3">
+                    <div class="col-6">
+                        <div class="stats-card bg-light rounded p-3">
+                            <div class="stat-number text-success fw-bold fs-4">{{ task_history.count }}</div>
+                            <div class="stat-label text-muted small">Total Jobs</div>
+                        </div>
+                    </div>
+                    <div class="col-6">
+                        <div class="stats-card bg-light rounded p-3">
+                            <div class="stat-number text-success fw-bold fs-4">{{ profile.completed_jobs_count }}</div>
+                            <div class="stat-label text-muted small">Completed</div>
+                        </div>
+                    </div>
+                    <div class="col-6">
+                        <div class="stats-card bg-light rounded p-3">
+                            <div class="stat-number text-success fw-bold fs-4">{{ applied_jobs_count }}</div>
+                            <div class="stat-label text-muted small">Applied</div>
+                        </div>
+                    </div>
+                    <div class="col-6">
+                        <div class="stats-card bg-light rounded p-3">
+                            <div class="stat-number text-success fw-bold fs-4">{{ active_applications_count }}</div>
+                            <div class="stat-label text-muted small">Pending</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Recent Activity -->
+        <div class="card mt-4">
+            <div class="card-header bg-light">
+                <h5 class="mb-0 text-dark">
+                    <i class="fas fa-history me-2 text-success"></i>Recent Activity
+                </h5>
+            </div>
+            <div class="card-body">
+                {% if recent_applications %}
+                    {% for application in recent_applications %}
+                    <div class="activity-item d-flex align-items-center border-bottom pb-3 mb-3">
+                        <div class="activity-icon bg-success rounded-circle d-flex align-items-center justify-content-center me-3" style="width: 40px; height: 40px;">
+                            <i class="fas fa-paper-plane text-white"></i>
+                        </div>
+                        <div class="flex-grow-1">
+                            <div class="fw-bold small">{{ application.job.title|truncatewords:4 }}</div>
+                            <div class="text-muted smaller">Applied {{ application.applied_at|timesince }} ago</div>
+                        </div>
+                        <span class="badge bg-{% if application.status == 'accepted' %}success{% elif application.status == 'rejected' %}danger{% else %}warning{% endif %}">
+                            {{ application.get_status_display }}
+                        </span>
+                    </div>
+                    {% endfor %}
+                {% else %}
+                    <div class="text-center py-3">
+                        <i class="fas fa-inbox fa-2x text-muted mb-2"></i>
+                        <p class="text-muted mb-0">No recent activity</p>
+                    </div>
+                {% endif %}
+                <div class="text-center">
+                    <a href="{% url 'my_applications' %}" class="btn btn-sm btn-outline-success">
+                        View All Applications
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-8">
+        <!-- Welcome Section -->
+        <div class="card bg-gradient-success text-white mb-4">
+            <div class="card-body">
+                <div class="row align-items-center">
+                    <div class="col-md-8">
+                        <h4 class="mb-2">Welcome back, {{ user.username }}! 👋</h4>
+                        <p class="mb-0 opacity-75">
+                            Ready to find your next opportunity? Check out your personalized job matches below.
+                        </p>
+                    </div>
+                    <div class="col-md-4 text-end">
+                        <div class="display-4 fw-bold mb-0">{{ job_matches|length }}</div>
+                        <small class="opacity-75">Job Matches</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Job Matches -->
+        <div class="card mb-4">
+            <div class="card-header bg-light d-flex justify-content-between align-items-center">
+                <h5 class="mb-0 text-dark">
+                    <i class="fas fa-bullseye me-2 text-success"></i>AI-Recommended Jobs
+                </h5>
+                <div>
+                    <a href="{% url 'recommended_jobs' %}" class="btn btn-sm btn-outline-success me-2">
+                        <i class="fas fa-star me-1"></i>View All
+                    </a>
+                    <a href="{% url 'job_search' %}" class="btn btn-sm btn-success">
+                        <i class="fas fa-search me-1"></i>Search Jobs
+                    </a>
+                </div>
+            </div>
+            <div class="card-body">
+                {% for match in job_matches|slice:":3" %}
+                {% if match.job %}
+                <div class="job-match-card border rounded p-3 mb-3">
+                    <div class="row align-items-center">
+                        <div class="col-md-8">
+                            <div class="d-flex align-items-center mb-2">
+                                <h6 class="mb-0 me-3 text-dark">{{ match.job.title }}</h6>
+                                <span class="badge bg-{% if match.match_score > 0.7 %}success{% elif match.match_score > 0.4 %}warning{% else %}secondary{% endif %}">
+                                    {{ match.match_score|floatformat:0 }}% Match
+                                </span>
+                            </div>
+                            <p class="text-muted mb-2 small">{{ match.job.description|truncatewords:25 }}</p>
+                            <div class="job-meta small">
+                                <span class="me-3">
+                                    <i class="fas fa-map-marker-alt me-1 text-muted"></i>{{ match.job.location }}
+                                </span>
+                                <span class="me-3">
+                                    KSH {{ match.job.budget }}
+                                </span>
+                                <span>
+                                    <i class="fas fa-building me-1 text-muted"></i>{{ match.job.employer.user.username }}
+                                </span>
+                            </div>
+                            {% if match.ai_notes %}
+                            <div class="ai-insight small text-success mt-2">
+                                <i class="fas fa-robot me-1"></i>{{ match.ai_notes|truncatewords:25 }}
+                            </div>
+                            {% endif %}
+                        </div>
+                        <div class="col-md-4 text-end">
+                            <div class="match-score-display mb-3">
+                                <div class="progress mb-1" style="height: 8px;">
+                                    <div class="progress-bar bg-success" style="width: {{ match.match_score|floatformat:0 }}%"></div>
+                                </div>
+                                <small class="text-muted">{{ match.match_score|floatformat:0 }}% Match</small>
+                            </div>
+                            <div class="btn-group-vertical w-100">
+                                <a href="{% url 'job_detail' match.job.id %}" class="btn btn-sm btn-outline-success mb-1">View Details</a>
+                                <a href="{% url 'apply_for_job' match.job.id %}" class="btn btn-sm btn-success">Apply Now</a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                {% endif %}
+                {% empty %}
+                <div class="text-center py-5">
+                    <i class="fas fa-search fa-3x text-muted mb-3"></i>
+                    <h5 class="text-muted">No job matches yet</h5>
+                    <p class="text-muted mb-4">Complete your profile and add skills to get personalized job recommendations.</p>
+                    <div class="d-flex justify-content-center gap-2">
+                        <a href="{% url 'profile_edit' %}" class="btn btn-success">
+                            <i class="fas fa-user-edit me-1"></i>Update Profile
+                        </a>
+                        <a href="{% url 'job_search' %}" class="btn btn-outline-success">
+                            <i class="fas fa-search me-1"></i>Browse All Jobs
+                        </a>
+                    </div>
+                </div>
+                {% endfor %}
+
+                {% if job_matches|length > 3 %}
+                <div class="text-center mt-3">
+                    <a href="{% url 'recommended_jobs' %}" class="btn btn-outline-success">
+                        <i class="fas fa-arrow-right me-1"></i>View All {{ job_matches|length }} Recommended Jobs
+                    </a>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Quick Access -->
+        <div class="card">
+            <div class="card-header bg-light">
+                <h5 class="mb-0 text-dark">
+                    <i class="fas fa-bolt me-2 text-warning"></i>Quick Access
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="row g-3">
+                    <div class="col-md-3 col-6">
+                        <a href="{% url 'recommended_jobs' %}" class="quick-action-card card h-100 text-center border-0 bg-light text-decoration-none">
+                            <div class="card-body p-3">
+                                <div class="bg-success bg-opacity-10 rounded-circle d-inline-flex align-items-center justify-content-center mb-3" style="width: 60px; height: 60px;">
+                                    <i class="fas fa-star fa-lg text-success"></i>
+                                </div>
+                                <h6 class="fw-bold text-dark mb-1">Recommended</h6>
+                                <small class="text-muted">AI-Matched Jobs</small>
+                            </div>
+                        </a>
+                    </div>
+                    <div class="col-md-3 col-6">
+                        <a href="{% url 'job_search' %}" class="quick-action-card card h-100 text-center border-0 bg-light text-decoration-none">
+                            <div class="card-body p-3">
+                                <div class="bg-success bg-opacity-10 rounded-circle d-inline-flex align-items-center justify-content-center mb-3" style="width: 60px; height: 60px;">
+                                    <i class="fas fa-search fa-lg text-success"></i>
+                                </div>
+                                <h6 class="fw-bold text-dark mb-1">Search Jobs</h6>
+                                <small class="text-muted">All Opportunities</small>
+                            </div>
+                        </a>
+                    </div>
+                    <div class="col-md-3 col-6">
+                        <a href="{% url 'saved_jobs' %}" class="quick-action-card card h-100 text-center border-0 bg-light text-decoration-none">
+                            <div class="card-body p-3">
+                                <div class="bg-success bg-opacity-10 rounded-circle d-inline-flex align-items-center justify-content-center mb-3" style="width: 60px; height: 60px;">
+                                    <i class="fas fa-bookmark fa-lg text-success"></i>
+                                </div>
+                                <h6 class="fw-bold text-dark mb-1">Saved Jobs</h6>
+                                <small class="text-muted">Your Favorites</small>
+                            </div>
+                        </a>
+                    </div>
+                    <div class="col-md-3 col-6">
+                        <a href="{% url 'skill_analysis' %}" class="quick-action-card card h-100 text-center border-0 bg-light text-decoration-none">
+                            <div class="card-body p-3">
+                                <div class="bg-warning bg-opacity-10 rounded-circle d-inline-flex align-items-center justify-content-center mb-3" style="width: 60px; height: 60px;">
+                                    <i class="fas fa-chart-line fa-lg text-warning"></i>
+                                </div>
+                                <h6 class="fw-bold text-dark mb-1">Skill Analysis</h6>
+                                <small class="text-muted">Improve Profile</small>
+                            </div>
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Platform Features -->
+        <div class="row mt-4">
+            <div class="col-md-6">
+                <div class="card bg-gradient-success text-white h-100">
+                    <div class="card-body text-center d-flex flex-column justify-content-center">
+                        <i class="fas fa-robot fa-2x mb-3"></i>
+                        <h6>AI Assistant</h6>
+                        <p class="small mb-3 opacity-75">Get personalized career guidance and job search tips</p>
+                        <a href="{% url 'chatbot' %}" class="btn btn-light btn-sm mt-auto">
+                            <i class="fas fa-comments me-1"></i>Chat Now
+                        </a>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="card bg-gradient-primary text-white h-100">
+                    <div class="card-body text-center d-flex flex-column justify-content-center">
+                        <i class="fas fa-trophy fa-2x mb-3"></i>
+                        <h6>Success Tips</h6>
+                        <p class="small mb-3 opacity-75">Complete your profile to increase match rates</p>
+                        <a href="{% url 'profile_edit' %}" class="btn btn-light btn-sm mt-auto">
+                            <i class="fas fa-user-edit me-1"></i>Optimize Profile
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.bg-gradient-success {
+    background: linear-gradient(135deg, #14a800 0%, #108a00 100%);
+}
+
+.bg-gradient-primary {
+    background: linear-gradient(135deg, #007bff 0%, #0056b3 100%);
+}
+
+.stat-number {
+    font-size: 1.8em;
+    font-weight: bold;
+    display: block;
+}
+
+.stat-label {
+    font-size: 0.8em;
+    color: #6c757d;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.job-match-card {
+    transition: all 0.3s ease;
+    border: 1px solid #e4ebe4 !important;
+}
+
+.job-match-card:hover {
+    border-color: #14a800 !important;
+    box-shadow: 0 2px 8px rgba(20, 168, 0, 0.1);
+}
+
+.quick-action-card {
+    transition: all 0.3s ease;
+}
+
+.quick-action-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+}
+
+.activity-icon {
+    transition: all 0.3s ease;
+}
+
+.activity-item:hover .activity-icon {
+    transform: scale(1.1);
+}
+
+.smaller {
+    font-size: 0.75rem;
+}
+
+.profile-stats {
+    background: #f8f9fa;
+    border-radius: 8px;
+    padding: 0.5rem;
+}
+
+.job-meta {
+    color: #5e6d55;
+}
+
+.ai-insight {
+    background: #e8f5e8;
+    padding: 0.5rem;
+    border-radius: 4px;
+    border-left: 3px solid #14a800;
+}
+
+.match-score-display {
+    min-width: 80px;
+}
+</style>
+{% endblock %}

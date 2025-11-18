@@ -1,0 +1,233 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-8">
+        <div class="card shadow-lg border-0 rounded-3">
+            <div class="card-header bg-success text-white py-4">
+                <div class="d-flex align-items-center">
+                    <i class="fas fa-star fa-2x me-3"></i>
+                    <div>
+                        <h4 class="mb-1">Rate Worker</h4>
+                        <p class="mb-0 opacity-75">Share your experience with the worker</p>
+                    </div>
+                </div>
+            </div>
+            <div class="card-body p-5">
+                <!-- Job Info -->
+                <div class="card bg-light-success border-0 rounded-3 mb-4">
+                    <div class="card-body">
+                        <div class="d-flex align-items-center">
+                            <i class="fas fa-briefcase fa-2x me-3 text-success"></i>
+                            <div>
+                                <h5 class="text-dark mb-1">{{ job.title }}</h5>
+                                <p class="text-muted mb-0">Completed Job</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <form method="post" class="needs-validation" novalidate>
+                    {% csrf_token %}
+                    
+                    <!-- Rating Section -->
+                    <div class="card border-0 rounded-3 mb-4">
+                        <div class="card-header bg-light py-3">
+                            <h5 class="mb-0 text-dark">
+                                <i class="fas fa-star me-2 text-success"></i>Rating Score
+                            </h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="text-center mb-3">
+                                <div id="ratingDisplay" class="h3 text-warning mb-3">
+                                    <i class="fas fa-star"></i>
+                                    <i class="fas fa-star"></i>
+                                    <i class="fas fa-star"></i>
+                                    <i class="far fa-star"></i>
+                                    <i class="far fa-star"></i>
+                                </div>
+                                <p id="ratingText" class="text-muted mb-0">Good - 3 stars</p>
+                            </div>
+                            
+                            <div class="d-flex justify-content-center mb-3">
+                                {% for i in "12345" %}
+                                <div class="form-check form-check-inline mx-2">
+                                    <input class="form-check-input" type="radio" name="score" 
+                                           id="score{{ forloop.counter }}" value="{{ forloop.counter }}"
+                                           {% if forloop.counter == 3 %}checked{% endif %}>
+                                    <label class="form-check-label" for="score{{ forloop.counter }}">
+                                        <span class="h4">
+                                            {% for j in "12345" %}
+                                                {% if forloop.counter <= forloop.parentloop.counter %}
+                                                    <i class="fas fa-star text-warning"></i>
+                                                {% else %}
+                                                    <i class="far fa-star text-warning"></i>
+                                                {% endif %}
+                                            {% endfor %}
+                                        </span>
+                                    </label>
+                                </div>
+                                {% endfor %}
+                            </div>
+                            
+                            <div class="row text-center small text-muted">
+                                <div class="col">Poor</div>
+                                <div class="col">Fair</div>
+                                <div class="col">Good</div>
+                                <div class="col">Very Good</div>
+                                <div class="col">Excellent</div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Comments Section -->
+                    <div class="card border-0 rounded-3 mb-4">
+                        <div class="card-header bg-light py-3">
+                            <h5 class="mb-0 text-dark">
+                                <i class="fas fa-comment me-2 text-success"></i>Comments (Optional)
+                            </h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="mb-3">
+                                <label for="id_comment" class="form-label fw-semibold text-dark">Share Your Feedback</label>
+                                {{ form.comment }}
+                                <div class="form-text text-muted mt-2">
+                                    <i class="fas fa-lightbulb me-1 text-success"></i>
+                                    Share your experience working with this worker. Your feedback helps improve the platform.
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Info Alert -->
+                    <div class="alert alert-success bg-light-success border-0 rounded-3">
+                        <div class="d-flex align-items-start">
+                            <i class="fas fa-info-circle fa-2x me-3 text-success mt-1"></i>
+                            <div>
+                                <h6 class="text-success mb-2">
+                                    <i class="fas fa-chart-line me-2"></i>Why Your Rating Matters
+                                </h6>
+                                <p class="mb-0 text-dark">
+                                    Your rating will affect the worker's reliability score and help other employers make better hiring decisions. 
+                                    Honest feedback improves the platform for everyone.
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Action Buttons -->
+                    <div class="d-flex gap-3 mt-5 pt-4 border-top">
+                        <button type="submit" class="btn btn-success btn-lg px-5 py-3 fw-semibold flex-fill">
+                            <i class="fas fa-paper-plane me-2"></i>Submit Rating
+                        </button>
+                        <a href="{% url 'employer_dashboard' %}" class="btn btn-outline-secondary btn-lg px-4 py-3">
+                            <i class="fas fa-arrow-left me-2"></i>Cancel
+                        </a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.card {
+    transition: transform 0.2s ease-in-out;
+}
+
+.card:hover {
+    transform: translateY(-2px);
+}
+
+.rounded-3 {
+    border-radius: 12px !important;
+}
+
+.bg-light-success {
+    background-color: rgba(25, 135, 84, 0.05) !important;
+}
+
+.form-control {
+    border: 2px solid #e9ecef;
+    border-radius: 8px;
+    padding: 12px 16px;
+    transition: all 0.3s ease;
+}
+
+.form-control:focus {
+    border-color: #198754;
+    box-shadow: 0 0 0 0.2rem rgba(25, 135, 84, 0.15);
+}
+
+.btn-success {
+    background: linear-gradient(135deg, #198754, #146c43);
+    border: none;
+    border-radius: 8px;
+    transition: all 0.3s ease;
+}
+
+.btn-success:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 15px rgba(25, 135, 84, 0.3);
+}
+
+.form-check-input:checked {
+    background-color: #198754;
+    border-color: #198754;
+}
+</style>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const ratingTexts = {
+        1: 'Poor - 1 star',
+        2: 'Fair - 2 stars', 
+        3: 'Good - 3 stars',
+        4: 'Very Good - 4 stars',
+        5: 'Excellent - 5 stars'
+    };
+
+    // Make star ratings interactive
+    document.querySelectorAll('input[name="score"]').forEach(radio => {
+        radio.addEventListener('change', function() {
+            const score = parseInt(this.value);
+            updateRatingDisplay(score);
+        });
+    });
+
+    function updateRatingDisplay(score) {
+        const ratingDisplay = document.getElementById('ratingDisplay');
+        const ratingText = document.getElementById('ratingText');
+        
+        // Update stars display
+        ratingDisplay.innerHTML = '';
+        for (let i = 1; i <= 5; i++) {
+            const star = document.createElement('i');
+            star.className = i <= score ? 'fas fa-star text-warning' : 'far fa-star text-warning';
+            if (i > 1) ratingDisplay.appendChild(document.createTextNode(' '));
+            ratingDisplay.appendChild(star);
+        }
+        
+        // Update rating text
+        ratingText.textContent = ratingTexts[score];
+        
+        // Update all radio button star displays
+        document.querySelectorAll('.form-check-label .fas, .form-check-label .far').forEach((star, index) => {
+            const parentIndex = Math.floor(index / 5);
+            const starIndex = index % 5;
+            const radioScore = parentIndex + 1;
+            
+            if (starIndex < radioScore) {
+                star.className = 'fas fa-star text-warning';
+            } else {
+                star.className = 'far fa-star text-warning';
+            }
+        });
+    }
+
+    // Initialize display
+    const initialScore = document.querySelector('input[name="score"]:checked').value;
+    updateRatingDisplay(parseInt(initialScore));
+});
+</script>
+{% endblock %}

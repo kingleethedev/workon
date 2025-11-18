@@ -1,0 +1,451 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-xl-8">
+        <!-- Header Section -->
+        <div class="text-center mb-5">
+            <div class="welcome-icon bg-success bg-opacity-10 rounded-circle d-inline-flex align-items-center justify-content-center mb-4" style="width: 80px; height: 80px;">
+                <i class="fas fa-user-plus fa-2x text-success"></i>
+            </div>
+            <h2 class="text-dark mb-2">Join WorkNet</h2>
+            <p class="text-muted mb-4">Create your account and start your journey to better job opportunities</p>
+        </div>
+
+        <div class="row">
+            <!-- Registration Form -->
+            <div class="col-lg-6">
+                <div class="card">
+                    <div class="card-header bg-success text-white text-center">
+                        <h4 class="mb-0">
+                            <i class="fas fa-user-plus me-2"></i>Create Account
+                        </h4>
+                    </div>
+                    <div class="card-body p-4">
+                        <form method="post">
+                            {% csrf_token %}
+                            
+                            {% for field in form %}
+                            <div class="mb-4">
+                                <label for="{{ field.id_for_label }}" class="form-label fw-bold text-dark">
+                                    {% if field.name == 'username' %}
+                                    <i class="fas fa-user me-1 text-success"></i>
+                                    {% elif field.name == 'email' %}
+                                    <i class="fas fa-envelope me-1 text-success"></i>
+                                    {% elif field.name == 'password1' %}
+                                    <i class="fas fa-lock me-1 text-success"></i>
+                                    {% elif field.name == 'password2' %}
+                                    <i class="fas fa-lock me-1 text-success"></i>
+                                    {% else %}
+                                    <i class="fas fa-pencil-alt me-1 text-success"></i>
+                                    {% endif %}
+                                    {{ field.label }}
+                                    {% if field.field.required %}<span class="text-danger">*</span>{% endif %}
+                                </label>
+                                
+                                <!-- Apply consistent styling to all form fields -->
+                                {% if field.field.widget.input_type == 'text' or field.field.widget.input_type == 'email' or field.field.widget.input_type == 'password' %}
+                                    <input type="{{ field.field.widget.input_type }}" 
+                                           name="{{ field.name }}"
+                                           id="{{ field.id_for_label }}"
+                                           class="form-control {% if field.errors %}is-invalid{% endif %}"
+                                           value="{{ field.value|default:'' }}"
+                                           {% if field.field.required %}required{% endif %}>
+                                {% else %}
+                                    {{ field }}
+                                {% endif %}
+                                
+                                {% if field.help_text %}
+                                <div class="form-text">
+                                    <i class="fas fa-info-circle me-1"></i>{{ field.help_text }}
+                                </div>
+                                {% endif %}
+                                
+                                {% if field.errors %}
+                                <div class="text-danger mt-2">
+                                    {% for error in field.errors %}
+                                    <small><i class="fas fa-exclamation-circle me-1"></i>{{ error }}</small>
+                                    {% endfor %}
+                                </div>
+                                {% endif %}
+                            </div>
+                            {% endfor %}
+                            
+                            <!-- Terms Agreement -->
+                            <div class="mb-4">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" id="termsAgreement" required>
+                                    <label class="form-check-label small text-muted" for="termsAgreement">
+                                        I agree to the <a href="#" class="text-success">Terms of Service</a> and <a href="#" class="text-success">Privacy Policy</a>
+                                    </label>
+                                </div>
+                            </div>
+                            
+                            <button type="submit" class="btn btn-success w-100 py-3 fw-bold">
+                                <i class="fas fa-rocket me-2"></i>Create Account
+                            </button>
+                        </form>
+                        
+                        <div class="text-center mt-4 pt-3 border-top">
+                            <p class="text-muted mb-0">
+                                Already have an account? 
+                                <a href="{% url 'login' %}" class="text-success fw-bold text-decoration-none">
+                                    Sign In Here
+                                </a>
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Benefits Sidebar -->
+            <div class="col-lg-6">
+                <div class="card h-100">
+                    <div class="card-header bg-light">
+                        <h5 class="mb-0 text-dark">
+                            <i class="fas fa-star me-2 text-warning"></i>Why Join WorkNet?
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="benefit-item d-flex align-items-start mb-4">
+                            <div class="benefit-icon bg-success bg-opacity-10 rounded-circle d-flex align-items-center justify-content-center me-3 flex-shrink-0" style="width: 50px; height: 50px;">
+                                <i class="fas fa-robot text-success fa-lg"></i>
+                            </div>
+                            <div>
+                                <h6 class="text-dark mb-1">AI-Powered Matching</h6>
+                                <p class="text-muted small mb-0">Smart algorithms match you with perfect job opportunities based on your skills and preferences.</p>
+                            </div>
+                        </div>
+                        
+                        <div class="benefit-item d-flex align-items-start mb-4">
+                            <div class="benefit-icon bg-primary bg-opacity-10 rounded-circle d-flex align-items-center justify-content-center me-3 flex-shrink-0" style="width: 50px; height: 50px;">
+                                <i class="fas fa-briefcase text-primary fa-lg"></i>
+                            </div>
+                            <div>
+                                <h6 class="text-dark mb-1">Quality Opportunities</h6>
+                                <p class="text-muted small mb-0">Access verified job postings from reputable employers with fair compensation.</p>
+                            </div>
+                        </div>
+                        
+                        <div class="benefit-item d-flex align-items-start mb-4">
+                            <div class="benefit-icon bg-warning bg-opacity-10 rounded-circle d-flex align-items-center justify-content-center me-3 flex-shrink-0" style="width: 50px; height: 50px;">
+                                <i class="fas fa-chart-line text-warning fa-lg"></i>
+                            </div>
+                            <div>
+                                <h6 class="text-dark mb-1">Career Growth</h6>
+                                <p class="text-muted small mb-0">Get skill analysis and career guidance to help you grow professionally.</p>
+                            </div>
+                        </div>
+                        
+                        <div class="benefit-item d-flex align-items-start">
+                            <div class="benefit-icon bg-info bg-opacity-10 rounded-circle d-flex align-items-center justify-content-center me-3 flex-shrink-0" style="width: 50px; height: 50px;">
+                                <i class="fas fa-shield-alt text-info fa-lg"></i>
+                            </div>
+                            <div>
+                                <h6 class="text-dark mb-1">Secure Platform</h6>
+                                <p class="text-muted small mb-0">Work with confidence knowing your data and payments are protected.</p>
+                            </div>
+                        </div>
+
+                        <!-- Stats Section -->
+              
+        <!-- Additional Info -->
+        <div class="row mt-4">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-body text-center">
+                        <div class="row align-items-center">
+                            <div class="col-md-4 mb-3 mb-md-0">
+                                <div class="d-flex align-items-center justify-content-center">
+                                    <div class="feature-icon bg-success bg-opacity-10 rounded-circle d-flex align-items-center justify-content-center me-3" style="width: 50px; height: 50px;">
+                                        <i class="fas fa-bolt text-success"></i>
+                                    </div>
+                                    <div class="text-start">
+                                        <h6 class="mb-0 text-dark">Quick Setup</h6>
+                                        <small class="text-muted">Get started in minutes</small>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-4 mb-3 mb-md-0">
+                                <div class="d-flex align-items-center justify-content-center">
+                                    <div class="feature-icon bg-primary bg-opacity-10 rounded-circle d-flex align-items-center justify-content-center me-3" style="width: 50px; height: 50px;">
+                                        <i class="fas fa-comments text-primary"></i>
+                                    </div>
+                                    <div class="text-start">
+                                        <h6 class="mb-0 text-dark">24/7 Support</h6>
+                                        <small class="text-muted">Help when you need it</small>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="d-flex align-items-center justify-content-center">
+                                    <div class="feature-icon bg-warning bg-opacity-10 rounded-circle d-flex align-items-center justify-content-center me-3" style="width: 50px; height: 50px;">
+                                        <i class="fas fa-mobile-alt text-warning"></i>
+                                    </div>
+                                    <div class="text-start">
+                                        <h6 class="mb-0 text-dark">Mobile Friendly</h6>
+                                        <small class="text-muted">Work from anywhere</small>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.welcome-icon {
+    transition: all 0.3s ease;
+}
+
+.card {
+    border: 1px solid #e4ebe4;
+    border-radius: 12px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    transition: all 0.3s ease;
+}
+
+.card:hover {
+    box-shadow: 0 4px 16px rgba(0,0,0,0.15);
+}
+
+/* Consistent form control styling */
+.form-control, .form-select, input[type="text"], input[type="email"], input[type="password"] {
+    border: 2px solid #e4ebe4 !important;
+    border-radius: 8px !important;
+    padding: 0.75rem 1rem !important;
+    transition: all 0.3s ease !important;
+    width: 100% !important;
+    font-size: 1rem !important;
+    line-height: 1.5 !important;
+}
+
+.form-control:focus, .form-select:focus, input[type="text"]:focus, 
+input[type="email"]:focus, input[type="password"]:focus {
+    border-color: #14a800 !important;
+    box-shadow: 0 0 0 3px rgba(20, 168, 0, 0.1) !important;
+    outline: none !important;
+}
+
+/* Ensure all form elements have consistent height */
+.form-control, .form-select, input[type="text"], input[type="email"], 
+input[type="password"], select, textarea {
+    min-height: 48px;
+    box-sizing: border-box;
+}
+
+/* Fix for Django form rendering */
+form input, form select, form textarea {
+    border: 2px solid #e4ebe4 !important;
+    border-radius: 8px !important;
+    padding: 0.75rem 1rem !important;
+    transition: all 0.3s ease !important;
+    width: 100% !important;
+}
+
+form input:focus, form select:focus, form textarea:focus {
+    border-color: #14a800 !important;
+    box-shadow: 0 0 0 3px rgba(20, 168, 0, 0.1) !important;
+    outline: none !important;
+}
+
+.benefit-item {
+    transition: all 0.3s ease;
+    padding: 0.5rem;
+    border-radius: 8px;
+}
+
+.benefit-item:hover {
+    background-color: #f8f9fa;
+}
+
+.benefit-icon {
+    transition: all 0.3s ease;
+}
+
+.benefit-item:hover .benefit-icon {
+    transform: scale(1.1);
+}
+
+.feature-icon {
+    transition: all 0.3s ease;
+}
+
+.stat-number {
+    font-size: 1.5rem;
+    font-weight: bold;
+    color: #14a800;
+}
+
+.stat-label {
+    font-size: 0.75rem;
+    color: #5e6d55;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.btn-success {
+    background-color: #14a800;
+    border-color: #14a800;
+    font-weight: 600;
+    transition: all 0.3s ease;
+}
+
+.btn-success:hover {
+    background-color: #108a00;
+    border-color: #108a00;
+    transform: translateY(-2px);
+}
+
+.form-check-input:checked {
+    background-color: #14a800;
+    border-color: #14a800;
+}
+
+.form-check-input:focus {
+    border-color: #14a800;
+    box-shadow: 0 0 0 0.25rem rgba(20, 168, 0, 0.25);
+}
+
+.text-danger {
+    font-size: 0.875em;
+}
+
+/* Password strength indicator */
+.password-strength {
+    margin-top: 0.5rem;
+}
+
+.strength-bar {
+    height: 4px;
+    border-radius: 2px;
+    margin-top: 0.25rem;
+    background-color: #e4ebe4;
+    overflow: hidden;
+}
+
+.strength-fill {
+    height: 100%;
+    width: 0%;
+    transition: all 0.3s ease;
+}
+
+.strength-weak { background-color: #dc3545; }
+.strength-fair { background-color: #ffc107; }
+.strength-good { background-color: #17a2b8; }
+.strength-strong { background-color: #14a800; }
+
+/* Ensure consistent form spacing */
+.mb-4 {
+    margin-bottom: 1.5rem !important;
+}
+
+.form-label {
+    margin-bottom: 0.5rem !important;
+    display: block !important;
+}
+
+/* Fix for any inline styles that might break alignment */
+form > div {
+    display: block !important;
+    width: 100% !important;
+}
+</style>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Add password strength indicator
+    const passwordInputs = document.querySelectorAll('input[type="password"]');
+    passwordInputs.forEach(passwordInput => {
+        const strengthBar = document.createElement('div');
+        strengthBar.className = 'strength-bar';
+        strengthBar.innerHTML = '<div class="strength-fill"></div>';
+        
+        const strengthText = document.createElement('div');
+        strengthText.className = 'small text-muted mt-1';
+        
+        passwordInput.parentNode.appendChild(strengthBar);
+        passwordInput.parentNode.appendChild(strengthText);
+        
+        passwordInput.addEventListener('input', function() {
+            const password = this.value;
+            const strength = calculatePasswordStrength(password);
+            const fill = strengthBar.querySelector('.strength-fill');
+            
+            fill.style.width = strength.percentage + '%';
+            fill.className = 'strength-fill strength-' + strength.level;
+            strengthText.textContent = strength.text;
+        });
+    });
+    
+    function calculatePasswordStrength(password) {
+        let score = 0;
+        
+        if (password.length >= 8) score += 25;
+        if (password.match(/[a-z]/) && password.match(/[A-Z]/)) score += 25;
+        if (password.match(/\d/)) score += 25;
+        if (password.match(/[^a-zA-Z\d]/)) score += 25;
+        
+        let level, text;
+        if (score >= 75) {
+            level = 'strong';
+            text = 'Strong password';
+        } else if (score >= 50) {
+            level = 'good';
+            text = 'Good password';
+        } else if (score >= 25) {
+            level = 'fair';
+            text = 'Fair password';
+        } else {
+            level = 'weak';
+            text = 'Weak password';
+        }
+        
+        return {
+            percentage: score,
+            level: level,
+            text: text
+        };
+    }
+    
+    // Add form validation styling
+    const form = document.querySelector('form');
+    form.addEventListener('submit', function(e) {
+        const inputs = this.querySelectorAll('input[required]');
+        let isValid = true;
+        
+        inputs.forEach(input => {
+            if (!input.value.trim()) {
+                input.classList.add('is-invalid');
+                isValid = false;
+            } else {
+                input.classList.remove('is-invalid');
+            }
+        });
+        
+        const termsAgreement = document.getElementById('termsAgreement');
+        if (termsAgreement && !termsAgreement.checked) {
+            termsAgreement.classList.add('is-invalid');
+            isValid = false;
+        } else if (termsAgreement) {
+            termsAgreement.classList.remove('is-invalid');
+        }
+        
+        if (!isValid) {
+            e.preventDefault();
+        }
+    });
+
+    // Ensure all form fields have consistent styling on page load
+    const formFields = form.querySelectorAll('input, select, textarea');
+    formFields.forEach(field => {
+        if (!field.classList.contains('form-control')) {
+            field.classList.add('form-control');
+        }
+    });
+});
+</script>
+{% endblock %}

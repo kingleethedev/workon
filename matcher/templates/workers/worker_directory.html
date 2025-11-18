@@ -1,0 +1,434 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <!-- Header Section -->
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <div>
+                <h2 class="text-dark mb-1">
+                    <i class="fas fa-users me-2 text-success"></i>Worker Directory
+                </h2>
+                <p class="text-muted mb-0">Find skilled professionals for your projects</p>
+            </div>
+            <div class="d-flex gap-2">
+                {% if user.workerprofile.user_type == 'employer' %}
+                <a href="{% url 'job_create' %}" class="btn btn-success">
+                    <i class="fas fa-plus me-1"></i>Post Job
+                </a>
+                {% endif %}
+                <a href="{% url 'chatbot' %}" class="btn btn-outline-success">
+                    <i class="fas fa-robot me-1"></i>AI Assistant
+                </a>
+            </div>
+        </div>
+
+        <!-- Stats Overview -->
+        <div class="row mb-4">
+            <div class="col-xl-3 col-md-6 mb-4">
+                <div class="card stats-card border-left-success">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div>
+                                <div class="stat-number text-success">{{ workers.paginator.count }}</div>
+                                <div class="stat-label">Total Workers</div>
+                            </div>
+                            <div class="stat-icon bg-success bg-opacity-10 rounded-circle d-flex align-items-center justify-content-center" style="width: 50px; height: 50px;">
+                                <i class="fas fa-users text-success fa-lg"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-xl-3 col-md-6 mb-4">
+                <div class="card stats-card border-left-primary">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div>
+                                <div class="stat-number text-primary">{{ approved_count }}</div>
+                                <div class="stat-label">Verified Workers</div>
+                            </div>
+                            <div class="stat-icon bg-primary bg-opacity-10 rounded-circle d-flex align-items-center justify-content-center" style="width: 50px; height: 50px;">
+                                <i class="fas fa-check-circle text-primary fa-lg"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-xl-3 col-md-6 mb-4">
+                <div class="card stats-card border-left-warning">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div>
+                                <div class="stat-number text-warning">{{ high_rated_count }}</div>
+                                <div class="stat-label">Top Rated</div>
+                            </div>
+                            <div class="stat-icon bg-warning bg-opacity-10 rounded-circle d-flex align-items-center justify-content-center" style="width: 50px; height: 50px;">
+                                <i class="fas fa-star text-warning fa-lg"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-xl-3 col-md-6 mb-4">
+                <div class="card stats-card border-left-info">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div>
+                                <div class="stat-number text-info">{{ categories_count }}</div>
+                                <div class="stat-label">Skill Categories</div>
+                            </div>
+                            <div class="stat-icon bg-info bg-opacity-10 rounded-circle d-flex align-items-center justify-content-center" style="width: 50px; height: 50px;">
+                                <i class="fas fa-tags text-info fa-lg"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Search and Filter Section -->
+        <div class="card mb-4">
+            <div class="card-header bg-light">
+                <h5 class="mb-0 text-dark">
+                    <i class="fas fa-search me-2 text-success"></i>Find Workers
+                </h5>
+            </div>
+            <div class="card-body">
+                <form method="get" class="row g-3">
+                    <div class="col-md-4">
+                        <label class="form-label fw-bold text-dark">Search by Name or Skill</label>
+                        <input type="text" name="q" class="form-control search-box" 
+                               placeholder="Search workers, skills, or expertise..." value="{{ request.GET.q }}">
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label fw-bold text-dark">Skill Category</label>
+                        <select name="category" class="form-select search-box">
+                            <option value="">All Categories</option>
+                            <option value="Construction" {% if request.GET.category == "Construction" %}selected{% endif %}>Construction</option>
+                            <option value="IT & Technology" {% if request.GET.category == "Tailoring" %}selected{% endif %}>Tailoring</option>
+                            <option value="Cleaning & Maintenance" {% if request.GET.category == "Cleaning & Maintenance" %}selected{% endif %}>Cleaning & Maintenance</option>
+                            <option value="Transportation" {% if request.GET.category == "Transportation" %}selected{% endif %}>Transportation</option>
+                            <option value="Creative & Design" {% if request.GET.category == "Creative & Design" %}selected{% endif %}>Creative & Design</option>
+                            <option value="General" {% if request.GET.category == "General" %}selected{% endif %}>General</option>
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label fw-bold text-dark">Location</label>
+                        <input type="text" name="location" class="form-control search-box" 
+                               placeholder="Enter location..." value="{{ request.GET.location }}">
+                    </div>
+                    <div class="col-md-2 d-flex align-items-end">
+                        <button type="submit" class="btn btn-success w-100 py-2">
+                            <i class="fas fa-search me-1"></i>Search
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Workers Grid -->
+        <div class="row">
+            {% for worker in workers %}
+            <div class="col-xl-4 col-lg-6 mb-4">
+                <div class="card h-100 worker-card">
+                    <div class="card-header bg-transparent border-0 pb-0">
+                        <div class="d-flex justify-content-between align-items-start mb-3">
+                            <div class="d-flex align-items-center">
+                                <div class="worker-avatar bg-success bg-opacity-10 rounded-circle d-flex align-items-center justify-content-center me-3" style="width: 50px; height: 50px;">
+                                    <i class="fas fa-user text-success fa-lg"></i>
+                                </div>
+                                <div>
+                                    <h5 class="card-title mb-1 text-dark">{{ worker.user.username }}</h5>
+                                    <p class="text-muted mb-0 small">
+                                        <i class="fas fa-map-marker-alt me-1"></i>{{ worker.location }}
+                                    </p>
+                                </div>
+                            </div>
+                            <div>
+                                {% if worker.is_approved %}
+                                <span class="badge bg-success">
+                                    <i class="fas fa-check-circle me-1"></i>Verified
+                                </span>
+                                {% else %}
+                                <span class="badge bg-warning">
+                                    <i class="fas fa-clock me-1"></i>Pending
+                                </span>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="card-body pt-0">
+                        <!-- Rating and Reliability -->
+                        <div class="d-flex justify-content-between align-items-center mb-3">
+                            <div class="text-warning">
+                                {% with rating=worker.average_rating %}
+                                    {% for i in "12345" %}
+                                        {% if forloop.counter <= rating %}
+                                            <i class="fas fa-star"></i>
+                                        {% else %}
+                                            <i class="far fa-star"></i>
+                                        {% endif %}
+                                    {% endfor %}
+                                    <small class="text-muted ms-1">({{ rating|default:"0.0" }})</small>
+                                {% endwith %}
+                            </div>
+                            <div class="reliability-score">
+                                <span class="badge bg-success bg-opacity-10 text-success">
+                                    <i class="fas fa-shield-alt me-1"></i>{{ worker.reliability_score|floatformat:1 }}/5.0
+                                </span>
+                            </div>
+                        </div>
+
+                        <!-- Bio -->
+                        {% if worker.bio %}
+                        <p class="card-text small text-muted mb-3">
+                            {{ worker.bio|truncatewords:25 }}
+                        </p>
+                        {% endif %}
+
+                        <!-- Skills -->
+                        <div class="mb-4">
+                            <h6 class="small fw-bold text-dark mb-2">
+                                <i class="fas fa-tools me-1 text-success"></i>SKILLS
+                            </h6>
+                            <div class="skills-container">
+                                {% for skill in worker.extracted_skills.all|slice:":5" %}
+                                <span class="skill-tag">
+                                    {{ skill.name }}
+                                </span>
+                                {% endfor %}
+                                {% if worker.extracted_skills.count > 5 %}
+                                <span class="skill-tag skill-tag-more">
+                                    +{{ worker.extracted_skills.count|add:"-5" }} more
+                                </span>
+                                {% endif %}
+                            </div>
+                        </div>
+
+                        <!-- Stats -->
+                        <div class="worker-stats border-top pt-3">
+                            <div class="row text-center">
+                                <div class="col-4">
+                                    <div class="stat-value text-primary fw-bold">{{ worker.completed_jobs_count }}</div>
+                                    <div class="stat-label small text-muted">Jobs Done</div>
+                                </div>
+                                <div class="col-4">
+                                    <div class="stat-value text-success fw-bold">
+                                        {% if worker.hourly_rate %}
+                                        KSH{{ worker.hourly_rate }}
+                                        {% else %}
+                                        N/A
+                                        {% endif %}
+                                    </div>
+                                    <div class="stat-label small text-muted">Hourly Rate</div>
+                                </div>
+                                <div class="col-4">
+                                    <div class="stat-value text-info fw-bold">{{ worker.ratings_received.count }}</div>
+                                    <div class="stat-label small text-muted">Reviews</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="card-footer bg-transparent border-top-0 pt-0">
+                        <div class="d-grid gap-2">
+                            {% if user.workerprofile.user_type == 'employer' %}
+                            <a href="#" class="btn btn-success btn-sm">
+                                <i class="fas fa-paper-plane me-1"></i>Contact Worker
+                            </a>
+                            {% else %}
+                            
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% empty %}
+            <div class="col-12">
+                <div class="text-center py-5">
+                    <i class="fas fa-user-slash fa-4x text-muted mb-4"></i>
+                    <h3 class="text-muted">No Workers Found</h3>
+                    <p class="text-muted mb-4">
+                        {% if request.GET.q or request.GET.category or request.GET.location %}
+                        Try adjusting your search filters to find more workers.
+                        {% else %}
+                        There are no workers registered on the platform yet.
+                        {% endif %}
+                    </p>
+                    <div class="d-flex justify-content-center gap-2">
+                        <a href="{% url 'worker_directory' %}" class="btn btn-success">
+                            <i class="fas fa-refresh me-1"></i>Clear Filters
+                        </a>
+                        {% if user.workerprofile.user_type == 'worker' %}
+                        <a href="{% url 'profile_edit' %}" class="btn btn-outline-success">
+                            <i class="fas fa-user-edit me-1"></i>Update Your Profile
+                        </a>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+
+        <!-- Pagination -->
+        {% if is_paginated %}
+        <nav aria-label="Page navigation" class="mt-4">
+            <ul class="pagination justify-content-center">
+                {% if page_obj.has_previous %}
+                <li class="page-item">
+                    <a class="page-link" href="?page=1{% for key, value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}">
+                        <i class="fas fa-angle-double-left me-1"></i>First
+                    </a>
+                </li>
+                <li class="page-item">
+                    <a class="page-link" href="?page={{ page_obj.previous_page_number }}{% for key, value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}">
+                        <i class="fas fa-angle-left me-1"></i>Previous
+                    </a>
+                </li>
+                {% endif %}
+
+                <li class="page-item active">
+                    <span class="page-link">Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}</span>
+                </li>
+
+                {% if page_obj.has_next %}
+                <li class="page-item">
+                    <a class="page-link" href="?page={{ page_obj.next_page_number }}{% for key, value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}">
+                        Next<i class="fas fa-angle-right ms-1"></i>
+                    </a>
+                </li>
+                <li class="page-item">
+                    <a class="page-link" href="?page={{ page_obj.paginator.num_pages }}{% for key, value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}">
+                        Last<i class="fas fa-angle-double-right ms-1"></i>
+                    </a>
+                </li>
+                {% endif %}
+            </ul>
+        </nav>
+        {% endif %}
+    </div>
+</div>
+
+<style>
+.stats-card {
+    transition: all 0.3s ease;
+    border-left: 4px solid !important;
+}
+
+.stats-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+}
+
+.stat-number {
+    font-size: 2rem;
+    font-weight: bold;
+    line-height: 1;
+}
+
+.stat-label {
+    font-size: 0.85rem;
+    color: #5e6d55;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-top: 0.25rem;
+}
+
+.stat-icon {
+    transition: all 0.3s ease;
+}
+
+.stats-card:hover .stat-icon {
+    transform: scale(1.1);
+}
+
+.worker-card {
+    transition: all 0.3s ease;
+    border: 1px solid #e4ebe4 !important;
+}
+
+.worker-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 8px 25px rgba(0,0,0,0.15) !important;
+    border-color: #14a800 !important;
+}
+
+.worker-avatar {
+    transition: all 0.3s ease;
+}
+
+.worker-card:hover .worker-avatar {
+    transform: scale(1.1);
+}
+
+.skill-tag {
+    background: #e8f5e8;
+    color: #14a800;
+    padding: 4px 10px;
+    border-radius: 15px;
+    font-size: 0.75rem;
+    margin: 2px;
+    display: inline-block;
+    border: 1px solid #c8e6c9;
+}
+
+.skill-tag-more {
+    background: #f8f9fa;
+    color: #6c757d;
+    border-color: #e9ecef;
+}
+
+.skills-container {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+}
+
+.worker-stats .stat-value {
+    font-size: 1.1rem;
+}
+
+.worker-stats .stat-label {
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.search-box {
+    border: 2px solid #e4ebe4;
+    border-radius: 8px;
+    padding: 0.75rem 1rem;
+    transition: all 0.3s ease;
+}
+
+.search-box:focus {
+    border-color: #14a800;
+    box-shadow: 0 0 0 3px rgba(20, 168, 0, 0.1);
+}
+
+.border-left-success { border-left-color: #14a800 !important; }
+.border-left-primary { border-left-color: #007bff !important; }
+.border-left-warning { border-left-color: #ffc107 !important; }
+.border-left-info { border-left-color: #17a2b8 !important; }
+
+.page-link {
+    border: 1px solid #e4ebe4;
+    color: #14a800;
+    padding: 0.5rem 1rem;
+}
+
+.page-link:hover {
+    background-color: #e8f5e8;
+    border-color: #14a800;
+    color: #14a800;
+}
+
+.page-item.active .page-link {
+    background-color: #14a800;
+    border-color: #14a800;
+    color: white;
+}
+</style>
+{% endblock %}

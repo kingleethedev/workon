@@ -1,0 +1,226 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h2 class="text-dark">
+                <i class="fas fa-star me-2 text-success"></i>Recommended Jobs
+            </h2>
+            <div class="d-flex gap-2">
+                <a href="{% url 'job_search' %}" class="btn btn-outline-success">
+                    <i class="fas fa-search me-1"></i>Browse All Jobs
+                </a>
+                <a href="{% url 'saved_jobs' %}" class="btn btn-outline-success">
+                    <i class="fas fa-bookmark me-1"></i>Saved Jobs
+                </a>
+            </div>
+        </div>
+
+        <!-- AI Matching Explanation -->
+        <div class="alert alert-success bg-light-success border-0 rounded-3 mb-4">
+            <div class="d-flex align-items-start">
+                <i class="fas fa-robot fa-2x me-3 text-success mt-1"></i>
+                <div>
+                    <h6 class="text-success mb-2">
+                        <i class="fas fa-bolt me-2"></i>AI-Powered Job Matching
+                    </h6>
+                    <p class="mb-0 text-dark">
+                        These jobs are specifically matched to your skills, experience, and profile using our AI matching system. 
+                        Jobs with higher match scores are better aligned with your qualifications.
+                    </p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Recommended Jobs -->
+        <div class="row">
+            {% for match in job_matches %}
+            {% if match.job %}  <!-- Check if job exists -->
+            <div class="col-md-6 mb-4">
+                <div class="card h-100 recommended-job-card shadow-sm border-0 rounded-3">
+                    <div class="card-header bg-transparent border-0 pb-0">
+                        <div class="d-flex justify-content-between align-items-start mb-2">
+                            <div class="flex-grow-1">
+                                <h5 class="card-title text-dark mb-1">
+                                    <a href="{% url 'job_detail' match.job.id %}" class="text-decoration-none text-dark">
+                                        {{ match.job.title }}
+                                    </a>
+                                </h5>
+                                <p class="text-muted small mb-2">
+                                    <i class="fas fa-building me-1 text-success"></i>{{ match.job.employer.user.username }}
+                                    <i class="fas fa-map-marker-alt ms-2 me-1 text-success"></i>{{ match.job.location }}
+                                </p>
+                            </div>
+                            <div class="text-end">
+                                <span class="badge bg-{% if match.match_score > 0.7 %}success{% elif match.match_score > 0.4 %}warning text-dark{% else %}secondary{% endif %} rounded-pill px-3 py-2">
+                                    {{ match.match_score|floatformat:0 }}% Match
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="card-body pt-2">
+                        <p class="card-text text-muted mb-3">
+                            {{ match.job.description|truncatewords:25 }}
+                        </p>
+                        
+                        <!-- AI Insights -->
+                        {% if match.ai_notes %}
+                        <div class="mb-3">
+                            <strong class="small text-success">AI INSIGHTS:</strong>
+                            <div class="bg-light rounded-3 p-3 mt-1">
+                                <p class="small text-muted mb-0">{{ match.ai_notes|truncatewords:20 }}</p>
+                            </div>
+                        </div>
+                        {% endif %}
+
+                        <!-- Match Breakdown -->
+                        <div class="row text-center small mb-4">
+                            <div class="col-3">
+                                <div class="text-success fw-bold">{{ match.skill_relevance|floatformat:0 }}%</div>
+                                <div class="text-muted">Skills</div>
+                            </div>
+                            <div class="col-3">
+                                <div class="text-success fw-bold">{{ match.proximity_score|floatformat:0 }}%</div>
+                                <div class="text-muted">Location</div>
+                            </div>
+                            <div class="col-3">
+                                <div class="text-success fw-bold">{{ match.reliability_score|floatformat:0 }}%</div>
+                                <div class="text-muted">Reliability</div>
+                            </div>
+                            <div class="col-3">
+                                <div class="text-success fw-bold">{{ match.job.get_applicants_count }}</div>
+                                <div class="text-muted">Applicants</div>
+                            </div>
+                        </div>
+
+                        <!-- Required Skills -->
+                        <div class="mb-3">
+                            <strong class="small text-success">REQUIRED SKILLS:</strong>
+                            <div class="mt-1">
+                                {% for skill in match.job.required_skills.all|slice:":4" %}
+                                <span class="badge bg-success me-1 mb-1 small">{{ skill.name }}</span>
+                                {% endfor %}
+                                {% if match.job.required_skills.count > 4 %}
+                                <span class="badge bg-secondary small">+{{ match.job.required_skills.count|add:"-4" }} more</span>
+                                {% endif %}
+                            </div>
+                        </div>
+
+                        <!-- Actions -->
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div>
+                                {% if match.job.budget %}
+                                <strong class="text-success h5">${{ match.job.budget }}</strong>
+                                <small class="text-muted"> budget</small>
+                                {% else %}
+                                <strong class="text-success h5">Negotiable</strong>
+                                {% endif %}
+                            </div>
+                            <div class="d-flex gap-2">
+                                {% if match.job.id in applied_job_ids %}
+                                <span class="badge bg-success rounded-pill px-3 py-2">
+                                    <i class="fas fa-check me-1"></i>Applied
+                                </span>
+                                {% else %}
+                                <a href="{% url 'apply_for_job' match.job.id %}" class="btn btn-success btn-sm px-3">
+                                    <i class="fas fa-paper-plane me-1"></i>Quick Apply
+                                </a>
+                                {% endif %}
+                                <a href="{% url 'job_detail' match.job.id %}" class="btn btn-outline-success btn-sm">Details</a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+            {% empty %}
+            <div class="col-12">
+                <div class="card shadow-sm border-0 rounded-3">
+                    <div class="card-body text-center py-5">
+                        <i class="fas fa-star fa-4x text-muted mb-4"></i>
+                        <h3 class="text-muted mb-3">No Recommended Jobs Yet</h3>
+                        <p class="text-muted mb-4">
+                            We're still analyzing your profile to find the perfect job matches. 
+                            In the meantime, you can browse all available jobs or update your profile for better recommendations.
+                        </p>
+                        <div class="d-flex justify-content-center gap-3">
+                            <a href="{% url 'job_search' %}" class="btn btn-success">
+                                <i class="fas fa-search me-2"></i>Browse All Jobs
+                            </a>
+                            <a href="{% url 'profile_edit' %}" class="btn btn-outline-success">
+                                <i class="fas fa-user-edit me-2"></i>Update Profile
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+
+        <!-- Pagination -->
+        {% if is_paginated %}
+        <nav aria-label="Page navigation" class="mt-4">
+            <ul class="pagination justify-content-center">
+                {% if page_obj.has_previous %}
+                <li class="page-item">
+                    <a class="page-link text-success" href="?page=1">
+                        <i class="fas fa-angle-double-left"></i> First
+                    </a>
+                </li>
+                <li class="page-item">
+                    <a class="page-link text-success" href="?page={{ page_obj.previous_page_number }}">
+                        <i class="fas fa-angle-left"></i> Previous
+                    </a>
+                </li>
+                {% endif %}
+
+                <li class="page-item active">
+                    <span class="page-link bg-success border-success">
+                        Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}
+                    </span>
+                </li>
+
+                {% if page_obj.has_next %}
+                <li class="page-item">
+                    <a class="page-link text-success" href="?page={{ page_obj.next_page_number }}">
+                        Next <i class="fas fa-angle-right"></i>
+                    </a>
+                </li>
+                <li class="page-item">
+                    <a class="page-link text-success" href="?page={{ page_obj.paginator.num_pages }}">
+                        Last <i class="fas fa-angle-double-right"></i>
+                    </a>
+                </li>
+                {% endif %}
+            </ul>
+        </nav>
+        {% endif %}
+    </div>
+</div>
+
+<style>
+.recommended-job-card {
+    transition: transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
+}
+
+.recommended-job-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 8px 25px rgba(25, 135, 84, 0.15) !important;
+}
+
+.rounded-3 {
+    border-radius: 12px !important;
+}
+
+.bg-light-success {
+    background-color: rgba(25, 135, 84, 0.05) !important;
+}
+
+.match-score {
+    font-size: 0.8em;
+    font-weight: bold;
+}
+</style>
+{% endblock %}

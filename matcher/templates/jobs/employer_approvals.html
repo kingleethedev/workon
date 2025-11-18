@@ -1,0 +1,537 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block extra_css %}
+<style>
+:root {
+    --upwork-green: #14a800;
+    --upwork-green-light: #e6f7e6;
+    --upwork-green-dark: #0d7300;
+    --upwork-gray: #f7f7f7;
+    --upwork-border: #e4e4e4;
+}
+
+.approval-card {
+    border: 1px solid var(--upwork-border);
+    border-radius: 12px;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    overflow: hidden;
+}
+
+.approval-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 8px 25px rgba(20, 168, 0, 0.15);
+    border-color: var(--upwork-green);
+}
+
+.status-badge {
+    padding: 6px 12px;
+    border-radius: 20px;
+    font-weight: 600;
+    font-size: 0.75rem;
+}
+
+.progress-timeline {
+    position: relative;
+    height: 8px;
+    background: var(--upwork-gray);
+    border-radius: 10px;
+    overflow: hidden;
+}
+
+.progress-fill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--upwork-green), #22c55e);
+    border-radius: 10px;
+    transition: width 0.8s ease;
+}
+
+.rating-stars {
+    display: flex;
+    gap: 4px;
+}
+
+.star {
+    font-size: 1.5rem;
+    color: #e4e4e4;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.star:hover,
+.star.active {
+    color: #f59e0b;
+    transform: scale(1.1);
+}
+
+.character-counter {
+    font-size: 0.875rem;
+    color: #6b7280;
+}
+
+.signature-pad {
+    border: 2px dashed var(--upwork-border);
+    border-radius: 8px;
+    background: var(--upwork-gray);
+    min-height: 120px;
+    transition: all 0.3s ease;
+}
+
+.signature-pad:focus {
+    border-color: var(--upwork-green);
+    background: white;
+}
+
+.confirmation-checkbox {
+    border: 2px solid var(--upwork-border);
+    border-radius: 6px;
+    padding: 16px;
+    transition: all 0.3s ease;
+}
+
+.confirmation-checkbox:has(input:checked) {
+    border-color: var(--upwork-green);
+    background: var(--upwork-green-light);
+}
+
+.guideline-item {
+    padding: 12px;
+    border-left: 3px solid var(--upwork-green);
+    background: var(--upwork-gray);
+    margin-bottom: 8px;
+    border-radius: 0 8px 8px 0;
+}
+
+.worker-avatar {
+    width: 60px;
+    height: 60px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 3px solid var(--upwork-green);
+}
+
+.fade-in {
+    animation: fadeIn 0.6s ease-in;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(20px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.hover-lift {
+    transition: transform 0.2s ease;
+}
+
+.hover-lift:hover {
+    transform: translateY(-2px);
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="row fade-in">
+    <div class="col-12">
+        <!-- Header Section -->
+        <div class="d-flex justify-content-between align-items-center mb-5">
+            <div>
+                <h1 class="h2 mb-2">
+                    <i class="fas fa-check-circle me-3 text-success"></i>Job Approvals
+                </h1>
+                <p class="text-muted mb-0">Review and approve completed work from your team</p>
+            </div>
+            <div class="d-flex gap-3">
+                <a href="{% url 'employer_dashboard' %}" class="btn btn-outline-secondary btn-lg">
+                    <i class="fas fa-arrow-left me-2"></i>Back to Dashboard
+                </a>
+            </div>
+        </div>
+
+        <!-- Enhanced Stats Cards -->
+        <div class="row mb-5">
+            <div class="col-xl-3 col-md-6 mb-4">
+                <div class="card approval-card border-warning">
+                    <div class="card-body">
+                        <div class="d-flex align-items-center">
+                            <div class="flex-grow-1">
+                                <h3 class="card-title text-warning mb-1">{{ jobs_to_approve.count }}</h3>
+                                <p class="card-text text-muted mb-0">Pending Approval</p>
+                            </div>
+                            <div class="flex-shrink-0">
+                                <div class="bg-warning bg-opacity-10 p-3 rounded-circle">
+                                    <i class="fas fa-clock fa-2x text-warning"></i>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-xl-3 col-md-6 mb-4">
+                <div class="card approval-card border-success">
+                    <div class="card-body">
+                        <div class="d-flex align-items-center">
+                            <div class="flex-grow-1">
+                                <h3 class="card-title text-success mb-1">{{ all_jobs.count }}</h3>
+                                <p class="card-text text-muted mb-0">Total Jobs</p>
+                            </div>
+                            <div class="flex-shrink-0">
+                                <div class="bg-success bg-opacity-10 p-3 rounded-circle">
+                                    <i class="fas fa-briefcase fa-2x text-success"></i>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-xl-3 col-md-6 mb-4">
+                <div class="card approval-card border-primary">
+                    <div class="card-body">
+                        <div class="d-flex align-items-center">
+                            <div class="flex-grow-1">
+                                <h3 class="card-title text-primary mb-1">{{ completed_jobs_count }}</h3>
+                                <p class="card-text text-muted mb-0">Completed</p>
+                            </div>
+                            <div class="flex-shrink-0">
+                                <div class="bg-primary bg-opacity-10 p-3 rounded-circle">
+                                    <i class="fas fa-check fa-2x text-primary"></i>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-xl-3 col-md-6 mb-4">
+                <div class="card approval-card border-info">
+                    <div class="card-body">
+                        <div class="d-flex align-items-center">
+                            <div class="flex-grow-1">
+                                <h3 class="card-title text-info mb-1">{{ in_progress_jobs_count }}</h3>
+                                <p class="card-text text-muted mb-0">In Progress</p>
+                            </div>
+                            <div class="flex-shrink-0">
+                                <div class="bg-info bg-opacity-10 p-3 rounded-circle">
+                                    <i class="fas fa-spinner fa-2x text-info"></i>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="row">
+            <!-- Main Content -->
+            <div class="col-lg-8">
+                <!-- Jobs Waiting for Approval -->
+                {% if jobs_to_approve %}
+                <div class="card approval-card mb-5">
+                    <div class="card-header bg-warning bg-opacity-10 py-4">
+                        <div class="d-flex align-items-center">
+                            <i class="fas fa-exclamation-circle fa-lg text-warning me-3"></i>
+                            <div class="flex-grow-1">
+                                <h4 class="mb-1 text-dark">Jobs Waiting for Your Approval</h4>
+                                <p class="text-muted mb-0">Review completed work and provide feedback</p>
+                            </div>
+                            <span class="status-badge bg-warning text-dark">{{ jobs_to_approve.count }} Pending</span>
+                        </div>
+                    </div>
+                    <div class="card-body p-4">
+                        <div class="row g-4">
+                            {% for job in jobs_to_approve %}
+                            <div class="col-12">
+                                <div class="card approval-card border-warning border-2">
+                                    <div class="card-body p-4">
+                                        <div class="row align-items-center">
+                                            <div class="col-md-8">
+                                                <h5 class="card-title mb-3">{{ job.title }}</h5>
+                                                
+                                                <!-- Job Details Grid -->
+                                                <div class="row g-3 mb-4">
+                                                    <div class="col-sm-6">
+                                                        <div class="d-flex align-items-center text-muted">
+                                                            <i class="fas fa-user me-2"></i>
+                                                            <span><strong>Worker:</strong> {{ job.get_assigned_worker.user.get_full_name|default:job.get_assigned_worker.user.username }}</span>
+                                                        </div>
+                                                    </div>
+                                                    <div class="col-sm-6">
+                                                        <div class="d-flex align-items-center text-muted">
+                                                            <i class="fas fa-calendar-check me-2"></i>
+                                                            <span><strong>Completed:</strong> {{ job.worker_completion_date|date:"M d, Y" }}</span>
+                                                        </div>
+                                                    </div>
+                                                    <div class="col-sm-6">
+                                                        <div class="d-flex align-items-center text-muted">
+                                                            <i class="fas fa-dollar-sign me-2"></i>
+                                                            <span><strong>Budget:</strong> ${{ job.budget }}</span>
+                                                        </div>
+                                                    </div>
+                                                    <div class="col-sm-6">
+                                                        <div class="d-flex align-items-center text-muted">
+                                                            <i class="fas fa-map-marker-alt me-2"></i>
+                                                            <span><strong>Location:</strong> {{ job.location }}</span>
+                                                        </div>
+                                                    </div>
+                                                </div>
+
+                                                <!-- Description -->
+                                                <div class="mb-4">
+                                                    <h6 class="text-muted mb-2">Job Description:</h6>
+                                                    <p class="text-dark">{{ job.description|truncatewords:50 }}</p>
+                                                </div>
+
+                                                <!-- Worker Signature -->
+                                                {% if job.worker_signature %}
+                                                <div class="alert alert-success py-3 mb-4">
+                                                    <div class="d-flex align-items-center">
+                                                        <i class="fas fa-signature fa-lg me-3 text-success"></i>
+                                                        <div>
+                                                            <strong class="text-success">Worker Signature:</strong>
+                                                            <p class="mb-0 mt-1 font-monospace">{{ job.worker_signature }}</p>
+                                                            <small class="text-muted">Digitally signed upon completion</small>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                                {% endif %}
+
+                                                <!-- Progress Timeline -->
+                                                <div class="completion-timeline">
+                                                    <div class="d-flex justify-content-between small text-muted mb-2">
+                                                        <span>Assigned</span>
+                                                        <span class="text-success">Completed</span>
+                                                        <span class="text-warning">Approval</span>
+                                                    </div>
+                                                    <div class="progress-timeline">
+                                                        <div class="progress-fill" style="width: 66%"></div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            
+                                            <div class="col-md-4 text-center">
+                                                <div class="d-grid gap-3">
+                                                    <a href="{% url 'approve_job' job.id %}" class="btn btn-success btn-lg hover-lift">
+                                                        <i class="fas fa-check-circle me-2"></i>Review & Approve
+                                                    </a>
+                                                    <a href="{% url 'job_detail' job.id %}" class="btn btn-outline-primary btn-lg hover-lift">
+                                                        <i class="fas fa-eye me-2"></i>View Details
+                                                    </a>
+                                                    <div class="text-center">
+                                                        <small class="text-muted">Time to approve: {{ job.worker_completion_date|timesince }}</small>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                </div>
+                {% endif %}
+
+                <!-- All Jobs Table -->
+                <div class="card approval-card">
+                    <div class="card-header bg-light py-4">
+                        <h4 class="mb-0">
+                            <i class="fas fa-list me-2 text-primary"></i>
+                            All Your Jobs
+                        </h4>
+                    </div>
+                    <div class="card-body p-0">
+                        {% if all_jobs %}
+                        <div class="table-responsive">
+                            <table class="table table-hover align-middle mb-0">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th class="ps-4">Job Title</th>
+                                        <th>Worker</th>
+                                        <th>Status</th>
+                                        <th>Budget</th>
+                                        <th>Completed</th>
+                                        <th>Approved</th>
+                                        <th class="pe-4">View</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for job in all_jobs %}
+                                    <tr class="hover-lift">
+                                        <td class="ps-4">
+                                            <div>
+                                                <strong class="d-block">{{ job.title }}</strong>
+                                                <small class="text-muted">{{ job.description|truncatewords:8 }}</small>
+                                            </div>
+                                        </td>
+                                        <td>
+                                            {% if job.get_assigned_worker %}
+                                                <div class="d-flex align-items-center">
+                                                    <div class="flex-shrink-0">
+                                                       
+                                                    <div class="flex-grow-1 ms-2">
+                                                        {{ job.get_assigned_worker.user.username }}
+                                                    </div>
+                                                </div>
+                                            {% else %}
+                                                <span class="text-muted">Not assigned</span>
+                                            {% endif %}
+                                        </td>
+                                        <td>
+                                            {% with status=job.status %}
+                                            <span class="status-badge 
+                                                {% if status == 'completed' %}bg-success text-white
+                                                {% elif status == 'in_progress' %}bg-info text-white
+                                                {% elif status == 'pending_approval' %}bg-warning text-dark
+                                                {% else %}bg-secondary text-white{% endif %}">
+                                                
+                                                {{ job.get_status_display }}
+                                            </span>
+                                            {% endwith %}
+                                        </td>
+                                        <td>
+                                            <strong class="text-success">KSH{{ job.budget }}</strong>
+                                        </td>
+                                        <td>
+                                            {% if job.worker_completion_date %}
+                                                <span class="text-success">
+                                                    <i class="fas fa-check me-1"></i>
+                                                    {{ job.worker_completion_date|date:"M d" }}
+                                                </span>
+                                            {% else %}
+                                                <span class="text-muted">-</span>
+                                            {% endif %}
+                                        </td>
+                                        <td>
+                                            {% if job.employer_approval_date %}
+                                                <span class="text-success">
+                                                    <i class="fas fa-check-double me-1"></i>
+                                                    {{ job.employer_approval_date|date:"M d" }}
+                                                </span>
+                                            {% else %}
+                                                <span class="text-muted">-</span>
+                                            {% endif %}
+                                        </td>
+                                        <td class="pe-4">
+                                            <div class="btn-group btn-group-sm">
+                                                <a href="{% url 'job_detail' job.id %}" class="btn btn-outline-primary" 
+                                                   data-bs-toggle="tooltip" title="View Details">
+                                                    <i class="fas fa-eye"></i>
+                                                </a>
+                                                {% if job.can_be_approved_by_employer %}
+                                                <a href="{% url 'approve_job' job.id %}" class="btn btn-success"
+                                                   data-bs-toggle="tooltip" title="Approve Job">
+                                                    <i class="fas fa-check"></i>
+                                                </a>
+                                                {% endif %}
+                                            </div>
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                        {% else %}
+                        <div class="text-center py-5">
+                            <i class="fas fa-briefcase fa-4x text-muted mb-4"></i>
+                            <h3 class="text-muted">No Jobs Found</h3>
+                            <p class="text-muted mb-4">You haven't posted any jobs yet.</p>
+                            <a href="{% url 'job_create' %}" class="btn btn-primary btn-lg">
+                                <i class="fas fa-plus me-2"></i>Post Your First Job
+                            </a>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+
+            <!-- Sidebar -->
+            <div class="col-lg-4">
+                <!-- Approval Guidelines -->
+                <div class="card approval-card mb-4">
+                    <div class="card-header bg-light py-3">
+                        <h5 class="mb-0">
+                            <i class="fas fa-info-circle me-2 text-primary"></i>
+                            Approval Guidelines
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="guideline-item">
+                            <i class="fas fa-check-circle text-success me-2"></i>
+                            <strong>Quality Check:</strong> Verify work meets requirements
+                        </div>
+                        <div class="guideline-item">
+                            <i class="fas fa-clock text-warning me-2"></i>
+                            <strong>Timely Review:</strong> Approve within 48 hours
+                        </div>
+                        <div class="guideline-item">
+                            <i class="fas fa-comment text-info me-2"></i>
+                            <strong>Provide Feedback:</strong> Help workers improve
+                        </div>
+                        <div class="guideline-item">
+                            <i class="fas fa-star text-primary me-2"></i>
+                            <strong>Rate Fairly:</strong> Use the 5-star rating system
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Quick Actions -->
+                <div class="card approval-card">
+                    <div class="card-header bg-light py-3">
+                        <h5 class="mb-0">
+                            <i class="fas fa-bolt me-2 text-warning"></i>
+                            Quick Actions
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="d-grid gap-2">
+                            <a href="{% url 'job_create' %}" class="btn btn-outline-primary btn-lg">
+                                <i class="fas fa-plus me-2"></i>Post New Job
+                            </a>
+                            <a href="{% url 'employer_dashboard' %}" class="btn btn-outline-success btn-lg">
+                                <i class="fas fa-tachometer-alt me-2"></i>View Dashboard
+                            </a>
+                            
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Initialize tooltips
+document.addEventListener('DOMContentLoaded', function() {
+    var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'))
+    var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+        return new bootstrap.Tooltip(tooltipTriggerEl)
+    });
+
+    // Add loading states for buttons
+    document.querySelectorAll('a[href*="approve"]').forEach(button => {
+        button.addEventListener('click', function(e) {
+            const originalText = this.innerHTML;
+            this.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Loading...';
+            this.disabled = true;
+            
+            setTimeout(() => {
+                this.innerHTML = originalText;
+                this.disabled = false;
+            }, 3000);
+        });
+    });
+
+    // Add smooth scrolling for approval cards
+    document.querySelectorAll('.approval-card').forEach(card => {
+        card.style.opacity = '0';
+        card.style.transform = 'translateY(20px)';
+        
+        setTimeout(() => {
+            card.style.transition = 'all 0.6s ease';
+            card.style.opacity = '1';
+            card.style.transform = 'translateY(0)';
+        }, 100);
+    });
+});
+</script>
+{% endblock %}

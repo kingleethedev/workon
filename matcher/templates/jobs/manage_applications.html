@@ -1,0 +1,135 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h2 class="text-dark">
+                <i class="fas fa-users me-2 text-success"></i>Manage Applications - {{ job.title }}
+            </h2>
+            <a href="{% url 'job_detail' job.id %}" class="btn btn-outline-success">
+                <i class="fas fa-arrow-left me-1"></i>Back to Job
+            </a>
+        </div>
+
+        <div class="card shadow-sm border-0 rounded-3">
+            <div class="card-header bg-light py-3">
+                <div class="d-flex align-items-center">
+                    <i class="fas fa-file-alt me-2 text-success"></i>
+                    <h5 class="mb-0">Applications ({{ applications.count }})</h5>
+                </div>
+            </div>
+            <div class="card-body p-4">
+                {% for application in applications %}
+                <div class="border-bottom pb-4 mb-4">
+                    <div class="row">
+                        <div class="col-md-8">
+                            <div class="d-flex align-items-start mb-3">
+                                <div class="flex-grow-1">
+                                    <h6 class="text-dark mb-1">{{ application.worker.user.username }}</h6>
+                                    <p class="text-muted mb-2 small">
+                                        <i class="fas fa-map-marker-alt me-1 text-success"></i>{{ application.worker.location }}
+                                    </p>
+                                </div>
+                            </div>
+                            
+                            {% if application.cover_letter %}
+                            <div class="mb-3">
+                                <strong class="text-success small">COVER LETTER:</strong>
+                                <div class="bg-light rounded-3 p-3 mt-2">
+                                    <p class="text-muted mb-0 small">{{ application.cover_letter|truncatewords:50 }}</p>
+                                </div>
+                            </div>
+                            {% endif %}
+                            
+                            <div class="mb-3">
+                                <strong class="text-success small">SKILLS:</strong>
+                                <div class="mt-1">
+                                    {% for skill in application.worker.extracted_skills.all|slice:":5" %}
+                                    <span class="badge bg-success me-1 mb-1">{{ skill.name }}</span>
+                                    {% endfor %}
+                                </div>
+                            </div>
+                            
+                            <div class="d-flex gap-4 small">
+                                <div>
+                                    <strong class="text-muted">Reliability Score:</strong>
+                                    <span class="badge bg-{% if application.worker.reliability_score >= 4 %}success{% elif application.worker.reliability_score >= 3 %}warning text-dark{% else %}danger{% endif %} rounded-pill px-3">
+                                        {{ application.worker.reliability_score|floatformat:1 }}/5
+                                    </span>
+                                </div>
+                                <div>
+                                    <strong class="text-muted">Applied:</strong>
+                                    <span class="text-dark">{{ application.applied_at|date:"M d, Y" }}</span>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="col-md-4">
+                            <div class="text-end">
+                                <div class="mb-3">
+                                    <span class="badge bg-{% if application.status == 'pending' %}warning text-dark{% elif application.status == 'accepted' %}success{% elif application.status == 'rejected' %}danger{% else %}secondary{% endif %} rounded-pill px-3 py-2">
+                                        {{ application.get_status_display }}
+                                    </span>
+                                </div>
+                                
+                                {% if application.proposed_rate %}
+                                <div class="mb-4">
+                                    <strong class="text-muted d-block">Proposed Rate:</strong>
+                                    <span class="h5 text-success">${{ application.proposed_rate }}/hr</span>
+                                </div>
+                                {% endif %}
+                                
+                                {% if application.status == 'pending' %}
+                                <div class="d-flex gap-2 justify-content-end">
+                                    <a href="{% url 'update_application_status' application.id 'accepted' %}" 
+                                       class="btn btn-success btn-sm px-3">
+                                        <i class="fas fa-check me-1"></i>Accept
+                                    </a>
+                                    <a href="{% url 'update_application_status' application.id 'rejected' %}" 
+                                       class="btn btn-outline-danger btn-sm px-3">
+                                        <i class="fas fa-times me-1"></i>Reject
+                                    </a>
+                                </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                {% empty %}
+                <div class="text-center py-5">
+                    <i class="fas fa-inbox fa-4x text-muted mb-4"></i>
+                    <h5 class="text-muted">No applications yet</h5>
+                    <p class="text-muted mb-4">Applications will appear here when workers apply for your job.</p>
+                    <a href="{% url 'job_detail' job.id %}" class="btn btn-success">
+                        <i class="fas fa-eye me-1"></i>View Job Details
+                    </a>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.card {
+    transition: transform 0.2s ease-in-out;
+}
+
+.card:hover {
+    transform: translateY(-2px);
+}
+
+.rounded-3 {
+    border-radius: 12px !important;
+}
+
+.bg-light {
+    background-color: #f8f9fa !important;
+}
+
+.badge.bg-warning {
+    background-color: #ffc107 !important;
+}
+</style>
+{% endblock %}

@@ -1,0 +1,503 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-lg-10">
+        <!-- Header Section -->
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <div>
+                <h2 class="text-dark mb-1">
+                    <i class="fas fa-user-edit me-2 text-success"></i>Edit Your Profile
+                </h2>
+                <p class="text-muted mb-0">Update your information to get better job matches</p>
+            </div>
+            <div class="d-flex gap-2">
+                <a href="{% url 'worker_dashboard' %}" class="btn btn-outline-success">
+                    <i class="fas fa-arrow-left me-1"></i>Back to Dashboard
+                </a>
+                <a href="{% url 'skill_analysis' %}" class="btn btn-success">
+                    <i class="fas fa-chart-line me-1"></i>Skill Analysis
+                </a>
+            </div>
+        </div>
+
+        <div class="row">
+            <!-- Main Form -->
+            <div class="col-lg-8">
+                <div class="card">
+                    <div class="card-header bg-light">
+                        <h5 class="mb-0 text-dark">
+                            <i class="fas fa-user-circle me-2 text-success"></i>Profile Information
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <form method="post">
+                            {% csrf_token %}
+                            
+                            <!-- User Type Field -->
+                            <div class="mb-4">
+                                <label for="{{ form.user_type.id_for_label }}" class="form-label fw-bold text-dark">
+                                    <i class="fas fa-user-tag me-1 text-success"></i>{{ form.user_type.label }}
+                                </label>
+                                <div class="row">
+                                    {% for choice in form.user_type %}
+                                    <div class="col-md-4 mb-2">
+                                        <div class="form-check card user-type-card">
+                                            <input class="form-check-input" type="radio" name="{{ form.user_type.name }}" 
+                                                   value="{{ choice.data.value }}" id="{{ choice.id_for_label }}"
+                                                   {% if choice.data.selected %}checked{% endif %}>
+                                            <label class="form-check-label w-100 p-3" for="{{ choice.id_for_label }}">
+                                                <div class="text-center">
+                                                    {% if choice.data.value == 'worker' %}
+                                                    <i class="fas fa-tools fa-2x text-primary mb-2"></i>
+                                                    <div class="fw-bold">Worker</div>
+                                                    <small class="text-muted">Find jobs and get hired</small>
+                                                    {% elif choice.data.value == 'employer' %}
+                                                    <i class="fas fa-building fa-2x text-success mb-2"></i>
+                                                    <div class="fw-bold">Employer</div>
+                                                    <small class="text-muted">Post jobs and hire talent</small>
+                                                    {% elif choice.data.value == 'admin' %}
+                                                    <i class="fas fa-cog fa-2x text-warning mb-2"></i>
+                                                    <div class="fw-bold">Admin</div>
+                                                    <small class="text-muted">Manage platform operations</small>
+                                                    {% endif %}
+                                                </div>
+                                            </label>
+                                        </div>
+                                    </div>
+                                    {% endfor %}
+                                </div>
+                                {% if form.user_type.errors %}
+                                <div class="text-danger mt-2">
+                                    {% for error in form.user_type.errors %}
+                                    <small><i class="fas fa-exclamation-circle me-1"></i>{{ error }}</small>
+                                    {% endfor %}
+                                </div>
+                                {% endif %}
+                            </div>
+
+                            <!-- Bio Field -->
+                            <div class="mb-4">
+                                <label for="{{ form.bio.id_for_label }}" class="form-label fw-bold text-dark">
+                                    <i class="fas fa-file-alt me-1 text-success"></i>{{ form.bio.label }}
+                                </label>
+                                {{ form.bio }}
+                                {% if form.bio.help_text %}
+                                <div class="form-text">
+                                    <i class="fas fa-info-circle me-1"></i>{{ form.bio.help_text }}
+                                </div>
+                                {% endif %}
+                                {% if form.bio.errors %}
+                                <div class="text-danger mt-2">
+                                    {% for error in form.bio.errors %}
+                                    <small><i class="fas fa-exclamation-circle me-1"></i>{{ error }}</small>
+                                    {% endfor %}
+                                </div>
+                                {% endif %}
+                            </div>
+
+                            <!-- Location Fields -->
+                            <div class="row">
+                                <div class="col-md-6 mb-4">
+                                    <label for="{{ form.location.id_for_label }}" class="form-label fw-bold text-dark">
+                                        <i class="fas fa-map-marker-alt me-1 text-success"></i>{{ form.location.label }}
+                                    </label>
+                                    {{ form.location }}
+                                    {% if form.location.help_text %}
+                                    <div class="form-text">
+                                        <i class="fas fa-info-circle me-1"></i>{{ form.location.help_text }}
+                                    </div>
+                                    {% endif %}
+                                    {% if form.location.errors %}
+                                    <div class="text-danger mt-2">
+                                        {% for error in form.location.errors %}
+                                        <small><i class="fas fa-exclamation-circle me-1"></i>{{ error }}</small>
+                                        {% endfor %}
+                                    </div>
+                                    {% endif %}
+                                </div>
+                                <div class="col-md-6 mb-4">
+                                    <label for="{{ form.hourly_rate.id_for_label }}" class="form-label fw-bold text-dark">
+                                        <i class="fas fa-dollar-sign me-1 text-success"></i>{{ form.hourly_rate.label }}
+                                    </label>
+                                    <div class="input-group">
+                                        <span class="input-group-text bg-light">KSH</span>
+                                        {{ form.hourly_rate }}
+                                    </div>
+                                    {% if form.hourly_rate.help_text %}
+                                    <div class="form-text">
+                                        <i class="fas fa-info-circle me-1"></i>{{ form.hourly_rate.help_text }}
+                                    </div>
+                                    {% endif %}
+                                    {% if form.hourly_rate.errors %}
+                                    <div class="text-danger mt-2">
+                                        {% for error in form.hourly_rate.errors %}
+                                        <small><i class="fas fa-exclamation-circle me-1"></i>{{ error }}</small>
+                                        {% endfor %}
+                                    </div>
+                                    {% endif %}
+                                </div>
+                            </div>
+
+                            <!-- Skills Description -->
+                            <div class="mb-4">
+                                <label for="{{ form.skills_description.id_for_label }}" class="form-label fw-bold text-dark">
+                                    <i class="fas fa-tools me-1 text-success"></i>{{ form.skills_description.label }}
+                                </label>
+                                {{ form.skills_description }}
+                                {% if form.skills_description.help_text %}
+                                <div class="form-text">
+                                    <i class="fas fa-info-circle me-1"></i>{{ form.skills_description.help_text }}
+                                </div>
+                                {% endif %}
+                                {% if form.skills_description.errors %}
+                                <div class="text-danger mt-2">
+                                    {% for error in form.skills_description.errors %}
+                                    <small><i class="fas fa-exclamation-circle me-1"></i>{{ error }}</small>
+                                    {% endfor %}
+                                </div>
+                                {% endif %}
+                            </div>
+
+                            <!-- AI Skills Extraction Alert -->
+                            <div class="alert alert-success border-start border-success border-4">
+                                <div class="d-flex align-items-center">
+                                    <div class="alert-icon bg-success rounded-circle d-flex align-items-center justify-content-center me-3" style="width: 40px; height: 40px;">
+                                        <i class="fas fa-robot text-white"></i>
+                                    </div>
+                                    <div>
+                                        <h6 class="alert-heading mb-1">AI-Powered Skill Extraction</h6>
+                                        <p class="mb-0">When you update your skills description, our AI will automatically extract and categorize your skills for better job matching!</p>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Form Actions -->
+                            <div class="d-flex justify-content-between align-items-center pt-3 border-top">
+                                <div>
+                                    <a href="{% url 'worker_dashboard' %}" class="btn btn-outline-secondary">
+                                        <i class="fas fa-times me-1"></i>Cancel
+                                    </a>
+                                </div>
+                                <div class="d-flex gap-2">
+                                    <button type="reset" class="btn btn-outline-warning">
+                                        <i class="fas fa-redo me-1"></i>Reset
+                                    </button>
+                                    <button type="submit" class="btn btn-success">
+                                        <i class="fas fa-save me-1"></i>Update Profile
+                                    </button>
+                                </div>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Sidebar Tips -->
+            <div class="col-lg-4">
+                <!-- Profile Completion -->
+                <div class="card mb-4">
+                    <div class="card-header bg-light">
+                        <h6 class="mb-0 text-dark">
+                            <i class="fas fa-chart-pie me-2 text-success"></i>Profile Strength
+                        </h6>
+                    </div>
+                    <div class="card-body">
+                        <div class="text-center mb-3">
+                            <div class="profile-strength-circle position-relative d-inline-block mb-3">
+                                <div class="circular-progress" data-percentage="75">
+                                    <div class="inner-circle">
+                                        <div class="percentage">75%</div>
+                                    </div>
+                                </div>
+                            </div>
+                            <h6 class="text-dark">Good Profile</h6>
+                            <p class="text-muted small">Complete your profile to get more job matches</p>
+                        </div>
+                        <div class="completion-checklist">
+                            <div class="completion-item d-flex align-items-center mb-2">
+                                <i class="fas fa-check-circle text-success me-2"></i>
+                                <span class="small">Basic Information</span>
+                            </div>
+                            <div class="completion-item d-flex align-items-center mb-2">
+                                <i class="fas fa-check-circle text-success me-2"></i>
+                                <span class="small">Location Added</span>
+                            </div>
+                            <div class="completion-item d-flex align-items-center mb-2">
+                                <i class="fas fa-circle text-warning me-2"></i>
+                                <span class="small">Skills Description</span>
+                            </div>
+                            <div class="completion-item d-flex align-items-center">
+                                <i class="fas fa-circle text-muted me-2"></i>
+                                <span class="small">Hourly Rate</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Tips Card -->
+                <div class="card mb-4">
+                    <div class="card-header bg-light">
+                        <h6 class="mb-0 text-dark">
+                            <i class="fas fa-lightbulb me-2 text-warning"></i>Profile Tips
+                        </h6>
+                    </div>
+                    <div class="card-body">
+                        <div class="tip-item d-flex align-items-start mb-3">
+                            <div class="tip-icon bg-success rounded-circle d-flex align-items-center justify-content-center me-3 flex-shrink-0" style="width: 32px; height: 32px;">
+                                <i class="fas fa-pen text-white small"></i>
+                            </div>
+                            <div>
+                                <h6 class="small fw-bold mb-1">Detailed Bio</h6>
+                                <p class="text-muted small mb-0">Write a comprehensive bio highlighting your experience and expertise</p>
+                            </div>
+                        </div>
+                        <div class="tip-item d-flex align-items-start mb-3">
+                            <div class="tip-icon bg-primary rounded-circle d-flex align-items-center justify-content-center me-3 flex-shrink-0" style="width: 32px; height: 32px;">
+                                <i class="fas fa-tools text-white small"></i>
+                            </div>
+                            <div>
+                                <h6 class="small fw-bold mb-1">Specific Skills</h6>
+                                <p class="text-muted small mb-0">List specific tools, technologies, and methodologies you're proficient in</p>
+                            </div>
+                        </div>
+                        <div class="tip-item d-flex align-items-start">
+                            <div class="tip-icon bg-info rounded-circle d-flex align-items-center justify-content-center me-3 flex-shrink-0" style="width: 32px; height: 32px;">
+                                <i class="fas fa-dollar-sign text-white small"></i>
+                            </div>
+                            <div>
+                                <h6 class="small fw-bold mb-1">Competitive Rate</h6>
+                                <p class="text-muted small mb-0">Set a fair hourly rate based on your skills and market standards</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Quick Actions -->
+                <div class="card">
+                    <div class="card-header bg-light">
+                        <h6 class="mb-0 text-dark">
+                            <i class="fas fa-bolt me-2 text-success"></i>Quick Actions
+                        </h6>
+                    </div>
+                    <div class="card-body">
+                        <div class="d-grid gap-2">
+                            <a href="{% url 'skill_analysis' %}" class="btn btn-outline-success btn-sm text-start">
+                                <i class="fas fa-chart-line me-2"></i>Skill Analysis
+                            </a>
+                            <a href="{% url 'chatbot' %}" class="btn btn-outline-primary btn-sm text-start">
+                                <i class="fas fa-robot me-2"></i>AI Career Coach
+                            </a>
+                            <a href="{% url 'worker_dashboard' %}" class="btn btn-outline-info btn-sm text-start">
+                                <i class="fas fa-eye me-2"></i>View Profile
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.form-control, .form-select {
+    border: 2px solid #e4ebe4;
+    border-radius: 8px;
+    padding: 0.75rem 1rem;
+    transition: all 0.3s ease;
+}
+
+.form-control:focus, .form-select:focus {
+    border-color: #14a800;
+    box-shadow: 0 0 0 3px rgba(20, 168, 0, 0.1);
+}
+
+textarea.form-control {
+    min-height: 120px;
+    resize: vertical;
+}
+
+.user-type-card {
+    border: 2px solid #e4ebe4;
+    border-radius: 8px;
+    transition: all 0.3s ease;
+    cursor: pointer;
+}
+
+.user-type-card:hover {
+    border-color: #14a800;
+    transform: translateY(-2px);
+}
+
+.user-type-card .form-check-input:checked + .form-check-label {
+    background-color: #e8f5e8;
+    border-radius: 6px;
+}
+
+.form-check-input:checked {
+    background-color: #14a800;
+    border-color: #14a800;
+}
+
+.alert-icon {
+    transition: all 0.3s ease;
+}
+
+.alert:hover .alert-icon {
+    transform: scale(1.1);
+}
+
+.tip-item {
+    transition: all 0.3s ease;
+    padding: 0.75rem;
+    border-radius: 6px;
+}
+
+.tip-item:hover {
+    background-color: #f8f9fa;
+}
+
+.tip-icon {
+    transition: all 0.3s ease;
+}
+
+.tip-item:hover .tip-icon {
+    transform: scale(1.1);
+}
+
+/* Circular Progress */
+.profile-strength-circle {
+    width: 100px;
+    height: 100px;
+}
+
+.circular-progress {
+    position: relative;
+    width: 100px;
+    height: 100px;
+    border-radius: 50%;
+    background: conic-gradient(#14a800 0% 75%, #e4ebe4 75% 100%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.circular-progress::before {
+    content: "";
+    position: absolute;
+    width: 80px;
+    height: 80px;
+    border-radius: 50%;
+    background: white;
+}
+
+.inner-circle {
+    position: relative;
+    z-index: 1;
+    text-align: center;
+}
+
+.percentage {
+    font-weight: bold;
+    color: #14a800;
+    font-size: 1.2rem;
+}
+
+.completion-item {
+    transition: all 0.3s ease;
+    padding: 0.5rem;
+    border-radius: 4px;
+}
+
+.completion-item:hover {
+    background-color: #f8f9fa;
+}
+
+.btn {
+    border-radius: 8px;
+    padding: 0.75rem 1.5rem;
+    font-weight: 600;
+    transition: all 0.3s ease;
+}
+
+.btn-success {
+    background-color: #14a800;
+    border-color: #14a800;
+}
+
+.btn-success:hover {
+    background-color: #108a00;
+    border-color: #108a00;
+    transform: translateY(-1px);
+}
+
+.input-group-text {
+    border: 2px solid #e4ebe4;
+    border-right: none;
+    background-color: #f8f9fa;
+}
+</style>
+
+<script>
+// Add interactivity to user type cards
+document.addEventListener('DOMContentLoaded', function() {
+    const userTypeCards = document.querySelectorAll('.user-type-card');
+    
+    userTypeCards.forEach(card => {
+        card.addEventListener('click', function() {
+            const radioInput = this.querySelector('.form-check-input');
+            radioInput.checked = true;
+            
+            // Remove active class from all cards
+            userTypeCards.forEach(c => {
+                c.classList.remove('border-success', 'bg-success', 'bg-opacity-10');
+            });
+            
+            // Add active class to selected card
+            this.classList.add('border-success', 'bg-success', 'bg-opacity-10');
+        });
+        
+        // Initialize active state
+        const radioInput = card.querySelector('.form-check-input');
+        if (radioInput.checked) {
+            card.classList.add('border-success', 'bg-success', 'bg-opacity-10');
+        }
+    });
+
+    // Add character counter for bio and skills description
+    const bioTextarea = document.getElementById('{{ form.bio.id_for_label }}');
+    const skillsTextarea = document.getElementById('{{ form.skills_description.id_for_label }}');
+    
+    function addCharacterCounter(textarea, maxLength) {
+        const counter = document.createElement('div');
+        counter.className = 'form-text text-end small';
+        counter.innerHTML = `<span class="char-count">0</span> / ${maxLength} characters`;
+        
+        textarea.parentNode.appendChild(counter);
+        
+        textarea.addEventListener('input', function() {
+            const count = this.value.length;
+            const charCount = counter.querySelector('.char-count');
+            charCount.textContent = count;
+            
+            if (count > maxLength * 0.9) {
+                counter.classList.add('text-warning');
+            } else {
+                counter.classList.remove('text-warning');
+            }
+        });
+        
+        // Trigger initial count
+        textarea.dispatchEvent(new Event('input'));
+    }
+    
+    if (bioTextarea) {
+        addCharacterCounter(bioTextarea, 500);
+    }
+    
+    if (skillsTextarea) {
+        addCharacterCounter(skillsTextarea, 1000);
+    }
+});
+</script>
+{% endblock %}

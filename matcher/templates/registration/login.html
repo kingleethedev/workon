@@ -1,0 +1,453 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-xl-8">
+        <!-- Header Section -->
+        <div class="text-center mb-5">
+            <div class="welcome-icon bg-success bg-opacity-10 rounded-circle d-inline-flex align-items-center justify-content-center mb-4" style="width: 80px; height: 80px;">
+                <i class="fas fa-sign-in-alt fa-2x text-success"></i>
+            </div>
+            <h2 class="text-dark mb-2">Welcome Back</h2>
+            <p class="text-muted mb-4">Sign in to your WorkNet account to continue your journey</p>
+        </div>
+
+        <div class="row justify-content-center">
+            <!-- Login Form -->
+            <div class="col-lg-5">
+                <div class="card">
+                    <div class="card-header bg-success text-white text-center">
+                        <h4 class="mb-0">
+                            <i class="fas fa-sign-in-alt me-2"></i>Sign In
+                        </h4>
+                    </div>
+                    <div class="card-body p-4">
+                        {% if form.errors %}
+                        <div class="alert alert-danger">
+                            <i class="fas fa-exclamation-triangle me-2"></i>
+                            Please enter a correct username and password. Note that both fields may be case-sensitive.
+                        </div>
+                        {% endif %}
+
+                        <form method="post">
+                            {% csrf_token %}
+                            
+                            <!-- Username Field -->
+                            <div class="mb-4">
+                                <label for="username" class="form-label fw-bold text-dark">
+                                    <i class="fas fa-user me-1 text-success"></i>Username
+                                </label>
+                                <div class="input-group">
+                                    <span class="input-group-text bg-light border-end-0">
+                                        <i class="fas fa-user text-muted"></i>
+                                    </span>
+                                    <input type="text" 
+                                           class="form-control border-start-0" 
+                                           name="username" 
+                                           id="username"
+                                           placeholder="Enter your username"
+                                           required
+                                           autofocus>
+                                </div>
+                            </div>
+
+                            <!-- Password Field -->
+                            <div class="mb-4">
+                                <label for="password" class="form-label fw-bold text-dark">
+                                    <i class="fas fa-lock me-1 text-success"></i>Password
+                                </label>
+                                <div class="input-group">
+                                    <span class="input-group-text bg-light border-end-0">
+                                        <i class="fas fa-lock text-muted"></i>
+                                    </span>
+                                    <input type="password" 
+                                           class="form-control border-start-0" 
+                                           name="password" 
+                                           id="password"
+                                           placeholder="Enter your password"
+                                           required>
+                                    <button type="button" class="input-group-text bg-light border-start-0" id="togglePassword">
+                                        <i class="fas fa-eye text-muted"></i>
+                                    </button>
+                                </div>
+                            </div>
+
+                            <!-- Remember Me & Forgot Password -->
+                            <div class="d-flex justify-content-between align-items-center mb-4">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" id="rememberMe">
+                                    <label class="form-check-label small text-muted" for="rememberMe">
+                                        Remember me
+                                    </label>
+                                </div>
+                                <a href="#" class="small text-success text-decoration-none">
+                                    Forgot password?
+                                </a>
+                            </div>
+                            
+                            <button type="submit" class="btn btn-success w-100 py-3 fw-bold mb-3">
+                                <i class="fas fa-sign-in-alt me-2"></i>Sign In
+                            </button>
+
+                            <!-- Social Login Options -->
+                            <div class="text-center mb-4">
+                                <div class="position-relative">
+                                    <hr>
+                                    <span class="position-absolute top-50 start-50 translate-middle bg-white px-3 small text-muted">
+                                        Or continue with
+                                    </span>
+                                </div>
+                            </div>
+
+                            
+                        </form>
+                        
+                        <div class="text-center mt-4 pt-3 border-top">
+                            <p class="text-muted mb-0">
+                                Don't have an account? 
+                                <a href="{% url 'register' %}" class="text-success fw-bold text-decoration-none">
+                                    Create Account
+                                </a>
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Benefits Sidebar -->
+            <div class="col-lg-5">
+                <div class="card h-100">
+                    <div class="card-header bg-light">
+                        <h5 class="mb-0 text-dark">
+                            <i class="fas fa-rocket me-2 text-success"></i>Welcome Back!
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="benefit-item d-flex align-items-start mb-4">
+                            <div class="benefit-icon bg-success bg-opacity-10 rounded-circle d-flex align-items-center justify-content-center me-3 flex-shrink-0" style="width: 50px; height: 50px;">
+                                <i class="fas fa-briefcase text-success fa-lg"></i>
+                            </div>
+                            <div>
+                                <h6 class="text-dark mb-1">Continue Your Journey</h6>
+                                <p class="text-muted small mb-0">Pick up where you left off with your job applications and opportunities.</p>
+                            </div>
+                        </div>
+                        
+                        <div class="benefit-item d-flex align-items-start mb-4">
+                            <div class="benefit-icon bg-primary bg-opacity-10 rounded-circle d-flex align-items-center justify-content-center me-3 flex-shrink-0" style="width: 50px; height: 50px;">
+                                <i class="fas fa-bell text-primary fa-lg"></i>
+                            </div>
+                            <div>
+                                <h6 class="text-dark mb-1">Check Notifications</h6>
+                                <p class="text-muted small mb-0">See new job matches, application updates, and messages from employers.</p>
+                            </div>
+                        </div>
+                        
+                        <div class="benefit-item d-flex align-items-start mb-4">
+                            <div class="benefit-icon bg-warning bg-opacity-10 rounded-circle d-flex align-items-center justify-content-center me-3 flex-shrink-0" style="width: 50px; height: 50px;">
+                                <i class="fas fa-robot text-warning fa-lg"></i>
+                            </div>
+                            <div>
+                                <h6 class="text-dark mb-1">AI Insights</h6>
+                                <p class="text-muted small mb-0">Get personalized career recommendations and skill analysis updates.</p>
+                            </div>
+                        </div>
+
+                        <!-- Quick Stats -->
+                        <div class="mt-5 pt-4 border-top">
+                            <h6 class="text-dark mb-3">Platform Snapshot</h6>
+                            <div class="row text-center">
+                                <div class="col-4">
+                                    <div class="stat-number text-success">500+</div>
+                                    <div class="stat-label">New Jobs</div>
+                                </div>
+                                <div class="col-4">
+                                    <div class="stat-number text-primary">2K+</div>
+                                    <div class="stat-label">Active Users</div>
+                                </div>
+                                <div class="col-4">
+                                    <div class="stat-number text-warning">98%</div>
+                                    <div class="stat-label">Satisfaction</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Security Notice -->
+                        <div class="mt-4 p-3 bg-light rounded">
+                            <div class="d-flex align-items-center">
+                                <i class="fas fa-shield-alt text-success me-2"></i>
+                                <div>
+                                    <small class="text-muted">
+                                        <strong>Secure Login:</strong> Your information is protected with enterprise-grade security.
+                                    </small>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Trust Indicators -->
+        <div class="row mt-4">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-body text-center">
+                        <h6 class="text-muted mb-4">Trusted by professionals worldwide</h6>
+                        <div class="row align-items-center justify-content-center">
+                            <div class="col-auto mb-3">
+                                <div class="d-flex align-items-center">
+                                    <i class="fas fa-check-circle text-success me-2"></i>
+                                    <small class="text-muted">SSL Encrypted</small>
+                                </div>
+                            </div>
+                            <div class="col-auto mb-3">
+                                <div class="d-flex align-items-center">
+                                    <i class="fas fa-check-circle text-success me-2"></i>
+                                    <small class="text-muted">GDPR Compliant</small>
+                                </div>
+                            </div>
+                            <div class="col-auto mb-3">
+                                <div class="d-flex align-items-center">
+                                    <i class="fas fa-check-circle text-success me-2"></i>
+                                    <small class="text-muted">24/7 Support</small>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.welcome-icon {
+    transition: all 0.3s ease;
+}
+
+.card {
+    border: 1px solid #e4ebe4;
+    border-radius: 12px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    transition: all 0.3s ease;
+}
+
+.card:hover {
+    box-shadow: 0 4px 16px rgba(0,0,0,0.15);
+}
+
+/* Form Control Styling */
+.form-control {
+    border: 2px solid #e4ebe4;
+    border-radius: 8px;
+    padding: 0.75rem 1rem;
+    transition: all 0.3s ease;
+    font-size: 1rem;
+    line-height: 1.5;
+}
+
+.form-control:focus {
+    border-color: #14a800;
+    box-shadow: 0 0 0 3px rgba(20, 168, 0, 0.1);
+    outline: none;
+}
+
+/* Input Group Styling */
+.input-group-text {
+    border: 2px solid #e4ebe4;
+    background-color: #f8f9fa;
+    transition: all 0.3s ease;
+}
+
+.input-group .form-control {
+    border-left: none;
+}
+
+.input-group .form-control:focus {
+    border-left: 2px solid #14a800;
+    margin-left: -2px;
+}
+
+.input-group .input-group-text:first-child {
+    border-right: none;
+    border-top-right-radius: 0;
+    border-bottom-right-radius: 0;
+}
+
+.input-group .input-group-text:last-child {
+    border-left: none;
+    border-top-left-radius: 0;
+    border-bottom-left-radius: 0;
+    cursor: pointer;
+}
+
+.input-group .input-group-text:last-child:hover {
+    background-color: #e9ecef;
+}
+
+.benefit-item {
+    transition: all 0.3s ease;
+    padding: 0.5rem;
+    border-radius: 8px;
+}
+
+.benefit-item:hover {
+    background-color: #f8f9fa;
+}
+
+.benefit-icon {
+    transition: all 0.3s ease;
+}
+
+.benefit-item:hover .benefit-icon {
+    transform: scale(1.1);
+}
+
+.stat-number {
+    font-size: 1.25rem;
+    font-weight: bold;
+    color: #14a800;
+}
+
+.stat-label {
+    font-size: 0.7rem;
+    color: #5e6d55;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.btn-success {
+    background-color: #14a800;
+    border-color: #14a800;
+    font-weight: 600;
+    transition: all 0.3s ease;
+}
+
+.btn-success:hover {
+    background-color: #108a00;
+    border-color: #108a00;
+    transform: translateY(-2px);
+}
+
+.btn-outline-primary, .btn-outline-dark {
+    border-width: 2px;
+    font-weight: 500;
+    transition: all 0.3s ease;
+}
+
+.btn-outline-primary:hover, .btn-outline-dark:hover {
+    transform: translateY(-1px);
+}
+
+.form-check-input:checked {
+    background-color: #14a800;
+    border-color: #14a800;
+}
+
+.form-check-input:focus {
+    border-color: #14a800;
+    box-shadow: 0 0 0 0.25rem rgba(20, 168, 0, 0.25);
+}
+
+.alert-danger {
+    border-left: 4px solid #dc3545;
+    background-color: #f8d7da;
+    border-color: #f5c6cb;
+}
+
+/* Social Login Buttons */
+.btn-outline-primary {
+    color: #4285f4;
+    border-color: #4285f4;
+}
+
+.btn-outline-primary:hover {
+    background-color: #4285f4;
+    color: white;
+}
+
+.btn-outline-dark {
+    color: #333;
+    border-color: #333;
+}
+
+.btn-outline-dark:hover {
+    background-color: #333;
+    color: white;
+}
+
+/* Responsive Design */
+@media (max-width: 991.98px) {
+    .col-lg-5 {
+        margin-bottom: 2rem;
+    }
+}
+</style>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Toggle password visibility
+    const togglePassword = document.getElementById('togglePassword');
+    const passwordInput = document.getElementById('password');
+    
+    if (togglePassword && passwordInput) {
+        togglePassword.addEventListener('click', function() {
+            const type = passwordInput.getAttribute('type') === 'password' ? 'text' : 'password';
+            passwordInput.setAttribute('type', type);
+            
+            const icon = this.querySelector('i');
+            if (type === 'password') {
+                icon.className = 'fas fa-eye text-muted';
+            } else {
+                icon.className = 'fas fa-eye-slash text-muted';
+            }
+        });
+    }
+
+    // Auto-focus username field
+    const usernameInput = document.getElementById('username');
+    if (usernameInput) {
+        setTimeout(() => {
+            usernameInput.focus();
+        }, 300);
+    }
+
+    // Add form validation
+    const form = document.querySelector('form');
+    form.addEventListener('submit', function(e) {
+        const username = document.getElementById('username');
+        const password = document.getElementById('password');
+        let isValid = true;
+
+        if (!username.value.trim()) {
+            username.classList.add('is-invalid');
+            isValid = false;
+        } else {
+            username.classList.remove('is-invalid');
+        }
+
+        if (!password.value.trim()) {
+            password.classList.add('is-invalid');
+            isValid = false;
+        } else {
+            password.classList.remove('is-invalid');
+        }
+
+        if (!isValid) {
+            e.preventDefault();
+        }
+    });
+
+    // Remove invalid class on input
+    const inputs = document.querySelectorAll('input[required]');
+    inputs.forEach(input => {
+        input.addEventListener('input', function() {
+            if (this.value.trim()) {
+                this.classList.remove('is-invalid');
+            }
+        });
+    });
+});
+</script>
+{% endblock %}

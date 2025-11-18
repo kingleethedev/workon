@@ -1,0 +1,45 @@
+/* Custom styles for WorkNet Matcher */
+.match-score {
+    font-size: 1.2em;
+    font-weight: bold;
+}
+
+.high-match {
+    color: #28a745;
+}
+
+.medium-match {
+    color: #ffc107;
+}
+
+.low-match {
+    color: #dc3545;
+}
+
+.skill-badge {
+    margin: 2px;
+}
+
+.job-card {
+    transition: transform 0.2s;
+}
+
+.job-card:hover {
+    transform: translateY(-2px);
+}
+
+.profile-stats {
+    text-align: center;
+    padding: 15px;
+}
+
+.stat-number {
+    font-size: 2em;
+    font-weight: bold;
+    display: block;
+}
+
+.stat-label {
+    font-size: 0.9em;
+    color: #6c757d;
+}
