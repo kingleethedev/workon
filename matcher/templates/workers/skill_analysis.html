@@ -36,7 +36,7 @@
                         <div class="skill-card border rounded p-3 h-100">
                             <div class="d-flex justify-content-between align-items-start mb-2">
                                 <div>
-                                    <h6 class="mb-1 text-dark">{{ skill_data.skill.name }}</h6>
+                                    <h6 class="mb-1 text-dark">{{ skill_data.skill.name|title }}</h6>
                                     <span class="badge bg-primary bg-opacity-10 text-primary small">
                                         {{ skill_data.skill.category }}
                                     </span>
@@ -44,12 +44,11 @@
                                 <div class="text-end">
                                     <div class="skill-level mb-1">
                                         <div class="d-flex align-items-center">
-                                            {% for i in "12345" %}
-                                            <i class="fas fa-star {% if forloop.counter <= skill_data.proficiency_level %}text-warning{% else %}text-light{% endif %} me-1 small"></i>
+                                            {% for i in "12345"|make_list %}
+                                            <i class="fas fa-star {% if forloop.counter <= skill_data.proficiency_level %}text-warning{% else %}text-muted{% endif %} me-1 small"></i>
                                             {% endfor %}
                                         </div>
                                     </div>
-                                   
                                 </div>
                             </div>
                             
@@ -59,11 +58,17 @@
                                     <span>Proficiency</span>
                                     <span>Level {{ skill_data.proficiency_level }}/5</span>
                                 </div>
-                               
+                                <div class="progress" style="height: 8px;">
+                                    <div class="progress-bar bg-success" style="width: {% widthratio skill_data.proficiency_level 5 100 %}%"></div>
+                                </div>
                             </div>
 
                             <!-- Experience Indicator -->
-                            
+                            {% if skill_data.years_of_experience > 0 %}
+                            <div class="small text-muted">
+                                <i class="fas fa-clock me-1"></i>{{ skill_data.years_of_experience }} years experience
+                            </div>
+                            {% endif %}
                         </div>
                     </div>
                     {% endfor %}
@@ -89,6 +94,7 @@
                 </h5>
             </div>
             <div class="card-body">
+                {% if worker_skills_data %}
                 <form method="post" class="mb-4">
                     {% csrf_token %}
                     <div class="row align-items-end">
@@ -97,7 +103,7 @@
                                 <i class="fas fa-bullseye me-1 text-success"></i>What role are you targeting?
                             </label>
                             <input type="text" name="desired_role" class="form-control search-box" 
-                                   placeholder="e.g., Tailor, Construction Manager, Mechanic Specialist..." 
+                                   placeholder="e.g., Mason, Chef, Electrician, Carpenter, Plumber..." 
                                    value="{{ request.POST.desired_role|default:'' }}"
                                    required>
                             <div class="form-text">
@@ -136,6 +142,17 @@
                             <p class="mb-0">Our AI is analyzing your skills for the role: "{{ request.POST.desired_role }}"</p>
                         </div>
                     </div>
+                </div>
+                {% endif %}
+                
+                {% else %}
+                <div class="alert alert-warning text-center">
+                    <i class="fas fa-info-circle fa-2x mb-2"></i>
+                    <h6>Add Skills to Enable Analysis</h6>
+                    <p class="mb-0">Please add your skills first to get personalized AI skill gap analysis.</p>
+                    <a href="{% url 'profile_edit' %}" class="btn btn-warning btn-sm mt-3">
+                        <i class="fas fa-plus me-1"></i>Add Skills Now
+                    </a>
                 </div>
                 {% endif %}
             </div>
@@ -269,6 +286,12 @@
 
 .skill-progress .progress {
     background-color: #e4ebe4;
+    border-radius: 10px;
+}
+
+.progress-bar {
+    border-radius: 10px;
+    transition: width 0.6s ease;
 }
 
 .quick-action-card {
@@ -329,5 +352,33 @@
 .skill-level .fa-star {
     font-size: 0.8rem;
 }
+
+.fa-star.text-muted {
+    color: #dee2e6 !important;
+}
 </style>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Animate progress bars
+    const progressBars = document.querySelectorAll('.progress-bar');
+    progressBars.forEach(bar => {
+        const width = bar.style.width;
+        bar.style.width = '0%';
+        setTimeout(() => {
+            bar.style.width = width;
+        }, 100);
+    });
+    
+    // Add character counter for desired role
+    const roleInput = document.querySelector('input[name="desired_role"]');
+    if (roleInput) {
+        roleInput.addEventListener('input', function() {
+            if (this.value.length > 100) {
+                this.value = this.value.slice(0, 100);
+            }
+        });
+    }
+});
+</script>
 {% endblock %}

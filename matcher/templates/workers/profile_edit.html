@@ -159,6 +159,55 @@
                                 {% endif %}
                             </div>
 
+                            <!-- Current Skills Section -->
+                            {% if worker_skills_data %}
+                            <div class="mb-4">
+                                <label class="form-label fw-bold text-dark">
+                                    <i class="fas fa-check-circle me-1 text-success"></i>Your Current Skills
+                                </label>
+                                <div class="border rounded p-3 bg-light">
+                                    <div class="d-flex flex-wrap gap-2 mb-3">
+                                        {% for skill_data in worker_skills_data %}
+                                        <div class="skill-badge">
+                                            <span class="badge bg-success p-2" style="font-size: 0.9rem;">
+                                                <i class="fas fa-tools me-1"></i>{{ skill_data.skill.name|title }}
+                                                <small class="text-white-50">(Lvl {{ skill_data.proficiency_level }})</small>
+                                                {% if skill_data.years_of_experience > 0 %}
+                                                <small class="text-white-50 ms-1">· {{ skill_data.years_of_experience }} yrs</small>
+                                                {% endif %}
+                                            </span>
+                                        </div>
+                                        {% endfor %}
+                                    </div>
+                                    <div class="alert alert-info mb-0">
+                                        <div class="d-flex align-items-center">
+                                            <i class="fas fa-info-circle me-2"></i>
+                                            <div class="small">
+                                                <strong>Skills Management:</strong> To add, remove, or update your skills, please visit the 
+                                                <a href="{% url 'manual_skill_entry' %}" class="alert-link">Manual Skill Entry</a> page.
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            {% else %}
+                            <div class="mb-4">
+                                <div class="alert alert-warning">
+                                    <div class="d-flex align-items-center">
+                                        <i class="fas fa-exclamation-triangle me-2"></i>
+                                        <div>
+                                            <strong>No skills added yet!</strong>
+                                            <p class="mb-0">Add your skills to get better job matches. You can add skills by:</p>
+                                            <ul class="mb-0 mt-2">
+                                                <li>Letting AI extract them from your skills description above, or</li>
+                                                <li><a href="{% url 'manual_skill_entry' %}" class="alert-link">Manually adding them here</a></li>
+                                            </ul>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            {% endif %}
+
                             <!-- AI Skills Extraction Alert -->
                             <div class="alert alert-success border-start border-success border-4">
                                 <div class="d-flex align-items-center">
@@ -205,32 +254,62 @@
                     <div class="card-body">
                         <div class="text-center mb-3">
                             <div class="profile-strength-circle position-relative d-inline-block mb-3">
-                                <div class="circular-progress" data-percentage="75">
+                                <div class="circular-progress" data-percentage="{{ profile_strength|default:75 }}">
                                     <div class="inner-circle">
-                                        <div class="percentage">75%</div>
+                                        <div class="percentage">{{ profile_strength|default:75 }}%</div>
                                     </div>
                                 </div>
                             </div>
-                            <h6 class="text-dark">Good Profile</h6>
+                            <h6 class="text-dark">
+                                {% if profile_strength > 80 %}Excellent Profile
+                                {% elif profile_strength > 60 %}Good Profile
+                                {% elif profile_strength > 40 %}Average Profile
+                                {% else %}Needs Improvement{% endif %}
+                            </h6>
                             <p class="text-muted small">Complete your profile to get more job matches</p>
                         </div>
                         <div class="completion-checklist">
                             <div class="completion-item d-flex align-items-center mb-2">
-                                <i class="fas fa-check-circle text-success me-2"></i>
-                                <span class="small">Basic Information</span>
+                                <i class="fas fa-{% if profile.bio %}check-circle text-success{% else %}circle text-muted{% endif %} me-2"></i>
+                                <span class="small">Bio Information</span>
                             </div>
                             <div class="completion-item d-flex align-items-center mb-2">
-                                <i class="fas fa-check-circle text-success me-2"></i>
+                                <i class="fas fa-{% if profile.location and profile.location != 'Unknown' %}check-circle text-success{% else %}circle text-muted{% endif %} me-2"></i>
                                 <span class="small">Location Added</span>
                             </div>
                             <div class="completion-item d-flex align-items-center mb-2">
-                                <i class="fas fa-circle text-warning me-2"></i>
-                                <span class="small">Skills Description</span>
+                                <i class="fas fa-{% if worker_skills_data %}check-circle text-success{% else %}circle text-warning{% endif %} me-2"></i>
+                                <span class="small">Skills Added</span>
                             </div>
                             <div class="completion-item d-flex align-items-center">
-                                <i class="fas fa-circle text-muted me-2"></i>
-                                <span class="small">Hourly Rate</span>
+                                <i class="fas fa-{% if profile.hourly_rate %}check-circle text-success{% else %}circle text-muted{% endif %} me-2"></i>
+                                <span class="small">Hourly Rate Set</span>
                             </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Skills Management Card -->
+                <div class="card mb-4">
+                    <div class="card-header bg-light">
+                        <h6 class="mb-0 text-dark">
+                            <i class="fas fa-tools me-2 text-success"></i>Skills Management
+                        </h6>
+                    </div>
+                    <div class="card-body">
+                        <div class="d-grid gap-2">
+                            <a href="{% url 'manual_skill_entry' %}" class="btn btn-success btn-sm text-start">
+                                <i class="fas fa-edit me-2"></i>Manage Your Skills
+                            </a>
+                            <a href="{% url 'skill_analysis' %}" class="btn btn-outline-info btn-sm text-start">
+                                <i class="fas fa-chart-line me-2"></i>Analyze Your Skills
+                            </a>
+                            {% if worker_skills_data %}
+                            <div class="alert alert-success small mb-0 mt-2">
+                                <i class="fas fa-check-circle me-1"></i>
+                                You have {{ worker_skills_data|length }} skill(s) added
+                            </div>
+                            {% endif %}
                         </div>
                     </div>
                 </div>
@@ -258,7 +337,7 @@
                             </div>
                             <div>
                                 <h6 class="small fw-bold mb-1">Specific Skills</h6>
-                                <p class="text-muted small mb-0">List specific tools, technologies, and methodologies you're proficient in</p>
+                                <p class="text-muted small mb-0">List specific skills like Masonry, Carpentry, Plumbing, Cooking, etc.</p>
                             </div>
                         </div>
                         <div class="tip-item d-flex align-items-start">
@@ -290,6 +369,9 @@
                             </a>
                             <a href="{% url 'worker_dashboard' %}" class="btn btn-outline-info btn-sm text-start">
                                 <i class="fas fa-eye me-2"></i>View Profile
+                            </a>
+                            <a href="{% url 'manual_skill_entry' %}" class="btn btn-outline-warning btn-sm text-start">
+                                <i class="fas fa-plus-circle me-2"></i>Add/Edit Skills
                             </a>
                         </div>
                     </div>
@@ -365,6 +447,22 @@ textarea.form-control {
     transform: scale(1.1);
 }
 
+.skill-badge {
+    transition: all 0.3s ease;
+}
+
+.skill-badge:hover {
+    transform: translateY(-2px);
+}
+
+.skill-badge .badge {
+    transition: all 0.3s ease;
+}
+
+.skill-badge:hover .badge {
+    background-color: #0f7b00 !important;
+}
+
 /* Circular Progress */
 .profile-strength-circle {
     width: 100px;
@@ -436,6 +534,17 @@ textarea.form-control {
     border-right: none;
     background-color: #f8f9fa;
 }
+
+.btn-sm {
+    padding: 0.5rem 1rem;
+}
+
+/* Progress bar animation */
+@keyframes progress {
+    from {
+        width: 0%;
+    }
+}
 </style>
 
 <script>
@@ -469,6 +578,8 @@ document.addEventListener('DOMContentLoaded', function() {
     const skillsTextarea = document.getElementById('{{ form.skills_description.id_for_label }}');
     
     function addCharacterCounter(textarea, maxLength) {
+        if (!textarea) return;
+        
         const counter = document.createElement('div');
         counter.className = 'form-text text-end small';
         counter.innerHTML = `<span class="char-count">0</span> / ${maxLength} characters`;
@@ -497,6 +608,42 @@ document.addEventListener('DOMContentLoaded', function() {
     
     if (skillsTextarea) {
         addCharacterCounter(skillsTextarea, 1000);
+    }
+    
+    // Animate circular progress
+    const circularProgress = document.querySelector('.circular-progress');
+    if (circularProgress) {
+        const percentage = circularProgress.dataset.percentage || 75;
+        circularProgress.style.background = `conic-gradient(#14a800 0% ${percentage}%, #e4ebe4 ${percentage}% 100%)`;
+    }
+    
+    // Add auto-save indicator
+    let saveTimeout;
+    const form = document.querySelector('form');
+    if (form) {
+        form.addEventListener('input', function() {
+            clearTimeout(saveTimeout);
+            const saveIndicator = document.createElement('div');
+            saveIndicator.className = 'alert alert-info alert-dismissible fade show mt-3';
+            saveIndicator.id = 'save-indicator';
+            saveIndicator.innerHTML = `
+                <i class="fas fa-info-circle me-2"></i>
+                Changes detected. Click "Update Profile" to save your changes.
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            `;
+            
+            const existingIndicator = document.getElementById('save-indicator');
+            if (existingIndicator) existingIndicator.remove();
+            
+            saveTimeout = setTimeout(() => {
+                if (form.querySelector('input, textarea, select').value !== '') {
+                    form.querySelector('.btn-success').classList.add('pulse');
+                    setTimeout(() => {
+                        form.querySelector('.btn-success').classList.remove('pulse');
+                    }, 1000);
+                }
+            }, 3000);
+        });
     }
 });
 </script>

@@ -28,6 +28,8 @@ urlpatterns = [
     path('workers/directory/', WorkerDirectoryView.as_view(), name='worker_directory'),
     path('workers/approve/<int:pk>/', views.approve_worker, name='approve_worker'),
     path('workers/skill-analysis/', views.skill_analysis, name='skill_analysis'),
+    path('profile/manual-skills/', views.manual_skill_entry, name='manual_skill_entry'),
+    path('api/add-skill/', views.add_skill_manual_ajax, name='add_skill_manual'),
     
     # Jobs
     path('jobs/create/', JobRequestCreateView.as_view(), name='job_create'),

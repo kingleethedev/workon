@@ -1,0 +1,436 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Manual Skill Entry - WorkNet{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+    <div class="row justify-content-center">
+        <div class="col-lg-10">
+            <!-- Header Section -->
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <div>
+                    <h2 class="text-dark mb-1">
+                        <i class="fas fa-tools me-2 text-success"></i>Manual Skill Entry
+                    </h2>
+                    <p class="text-muted">Add your skills manually to get better job matches</p>
+                </div>
+                <div>
+                    <a href="{% url 'worker_dashboard' %}" class="btn btn-outline-success">
+                        <i class="fas fa-arrow-left me-1"></i>Back to Dashboard
+                    </a>
+                </div>
+            </div>
+
+            {% if skills_description %}
+            <div class="alert alert-info border-start border-info border-4 mb-4">
+                <div class="d-flex align-items-center">
+                    <div class="alert-icon bg-info rounded-circle d-flex align-items-center justify-content-center me-3" style="width: 40px; height: 40px;">
+                        <i class="fas fa-info-circle text-white"></i>
+                    </div>
+                    <div>
+                        <h6 class="alert-heading mb-1">Your Skills Description</h6>
+                        <p class="mb-0">{{ skills_description|truncatechars:200 }}</p>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+
+            <div class="row">
+                <!-- Main Form -->
+                <div class="col-lg-8">
+                    <div class="card shadow-sm mb-4">
+                        <div class="card-header bg-light">
+                            <h5 class="mb-0 text-dark">
+                                <i class="fas fa-plus-circle me-2 text-success"></i>Add Your Skills
+                            </h5>
+                        </div>
+                        <div class="card-body">
+                            <form method="post" id="skillForm">
+                                {% csrf_token %}
+                                
+                                <div id="skills-container">
+                                    {% for skill in existing_skills %}
+                                    <div class="skill-entry mb-3 border rounded p-3 bg-light">
+                                        <div class="row align-items-end">
+                                            <div class="col-md-5">
+                                                <label class="form-label fw-bold">Skill Name *</label>
+                                                <input type="text" name="skill_names[]" class="form-control skill-name" 
+                                                       value="{{ skill.skill.name|title }}" required>
+                                            </div>
+                                            <div class="col-md-3">
+                                                <label class="form-label fw-bold">Proficiency (1-5)</label>
+                                                <select name="proficiency_levels[]" class="form-select">
+                                                    {% for i in "12345" %}
+                                                    <option value="{{ forloop.counter }}" 
+                                                            {% if skill.proficiency_level == forloop.counter %}selected{% endif %}>
+                                                        {{ forloop.counter }} - 
+                                                        {% if forloop.counter == 1 %}Beginner
+                                                        {% elif forloop.counter == 2 %}Basic
+                                                        {% elif forloop.counter == 3 %}Intermediate
+                                                        {% elif forloop.counter == 4 %}Advanced
+                                                        {% else %}Expert{% endif %}
+                                                    </option>
+                                                    {% endfor %}
+                                                </select>
+                                            </div>
+                                            <div class="col-md-3">
+                                                <label class="form-label fw-bold">Years Experience</label>
+                                                <input type="number" name="years_experience[]" class="form-control" 
+                                                       step="0.5" min="0" value="{{ skill.years_of_experience }}">
+                                            </div>
+                                            <div class="col-md-1">
+                                                <label class="form-label">&nbsp;</label>
+                                                <button type="button" class="btn btn-danger remove-skill w-100">
+                                                    <i class="fas fa-trash"></i>
+                                                </button>
+                                            </div>
+                                        </div>
+                                        <input type="hidden" name="categories[]" value="{{ skill.skill.category }}">
+                                    </div>
+                                    {% empty %}
+                                    <div class="skill-entry mb-3 border rounded p-3">
+                                        <div class="row align-items-end">
+                                            <div class="col-md-5">
+                                                <label class="form-label fw-bold">Skill Name *</label>
+                                                <input type="text" name="skill_names[]" class="form-control skill-name" 
+                                                       placeholder="e.g., Masonry, Carpentry, Plumbing" required>
+                                            </div>
+                                            <div class="col-md-3">
+                                                <label class="form-label fw-bold">Proficiency (1-5)</label>
+                                                <select name="proficiency_levels[]" class="form-select">
+                                                    <option value="1">1 - Beginner</option>
+                                                    <option value="2">2 - Basic</option>
+                                                    <option value="3" selected>3 - Intermediate</option>
+                                                    <option value="4">4 - Advanced</option>
+                                                    <option value="5">5 - Expert</option>
+                                                </select>
+                                            </div>
+                                            <div class="col-md-3">
+                                                <label class="form-label fw-bold">Years Experience</label>
+                                                <input type="number" name="years_experience[]" class="form-control" 
+                                                       step="0.5" min="0" placeholder="0">
+                                            </div>
+                                            <div class="col-md-1">
+                                                <label class="form-label">&nbsp;</label>
+                                                <button type="button" class="btn btn-danger remove-skill w-100" style="display: none;">
+                                                    <i class="fas fa-trash"></i>
+                                                </button>
+                                            </div>
+                                        </div>
+                                        <input type="hidden" name="categories[]" value="">
+                                    </div>
+                                    {% endfor %}
+                                </div>
+                                
+                                <div class="d-flex gap-2 mb-4">
+                                    <button type="button" class="btn btn-outline-primary" id="add-skill">
+                                        <i class="fas fa-plus me-1"></i>Add Another Skill
+                                    </button>
+                                    <button type="button" class="btn btn-outline-secondary" id="clear-form">
+                                        <i class="fas fa-undo me-1"></i>Clear All
+                                    </button>
+                                </div>
+                                
+                                <div class="alert alert-warning border-start border-warning border-4 mb-4">
+                                    <div class="d-flex align-items-start">
+                                        <i class="fas fa-info-circle me-2 mt-1"></i>
+                                        <div>
+                                            <strong>Why add skills?</strong>
+                                            <p class="mb-0 small">Adding your skills helps employers find you and increases your chances of getting matched with relevant jobs.</p>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <div class="d-grid gap-2">
+                                    <button type="submit" class="btn btn-success btn-lg">
+                                        <i class="fas fa-save me-2"></i>Save Skills
+                                    </button>
+                                    <a href="{% url 'worker_dashboard' %}" class="btn btn-outline-secondary">
+                                        Cancel
+                                    </a>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Sidebar -->
+                <div class="col-lg-4">
+                    <!-- Common Skills Card -->
+                    <div class="card shadow-sm mb-4">
+                        <div class="card-header bg-light">
+                            <h6 class="mb-0 text-dark">
+                                <i class="fas fa-lightbulb me-2 text-warning"></i>Common Skills
+                            </h6>
+                        </div>
+                        <div class="card-body" style="max-height: 400px; overflow-y: auto;">
+                            {% for category in common_skills|dictsort:"category" %}
+                            <div class="mb-3">
+                                <h6 class="text-success mb-2">{{ category.category }}</h6>
+                                <div class="d-flex flex-wrap gap-2">
+                                    {% for skill in common_skills %}
+                                    {% if skill.category == category.category %}
+                                    <span class="badge bg-secondary suggestion-skill p-2" 
+                                          data-skill="{{ skill.name }}" 
+                                          data-category="{{ skill.category }}"
+                                          style="cursor: pointer; font-size: 0.85rem;">
+                                        {{ skill.name }}
+                                    </span>
+                                    {% endif %}
+                                    {% endfor %}
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                    
+                    <!-- Tips Card -->
+                    <div class="card shadow-sm">
+                        <div class="card-header bg-light">
+                            <h6 class="mb-0 text-dark">
+                                <i class="fas fa-chart-line me-2 text-success"></i>Skill Tips
+                            </h6>
+                        </div>
+                        <div class="card-body">
+                            <div class="tip-item d-flex align-items-start mb-3">
+                                <i class="fas fa-check-circle text-success me-2 mt-1"></i>
+                                <div>
+                                    <h6 class="mb-1 small fw-bold">Be Specific</h6>
+                                    <p class="text-muted small mb-0">Instead of "Construction", use specific skills like "Masonry", "Carpentry", or "Plumbing"</p>
+                                </div>
+                            </div>
+                            <div class="tip-item d-flex align-items-start mb-3">
+                                <i class="fas fa-star text-warning me-2 mt-1"></i>
+                                <div>
+                                    <h6 class="mb-1 small fw-bold">Rate Honestly</h6>
+                                    <p class="text-muted small mb-0">Choose proficiency levels that accurately reflect your expertise</p>
+                                </div>
+                            </div>
+                            <div class="tip-item d-flex align-items-start">
+                                <i class="fas fa-chart-line text-info me-2 mt-1"></i>
+                                <div>
+                                    <h6 class="mb-1 small fw-bold">Track Experience</h6>
+                                    <p class="text-muted small mb-0">Include years of experience to improve job matching accuracy</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.skill-entry {
+    transition: all 0.3s ease;
+    background: white;
+}
+
+.skill-entry:hover {
+    box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+}
+
+.suggestion-skill {
+    transition: all 0.2s ease;
+    cursor: pointer;
+}
+
+.suggestion-skill:hover {
+    background-color: #14a800 !important;
+    transform: translateY(-1px);
+}
+
+.form-control, .form-select {
+    border: 2px solid #e4ebe4;
+    border-radius: 8px;
+    transition: all 0.3s ease;
+}
+
+.form-control:focus, .form-select:focus {
+    border-color: #14a800;
+    box-shadow: 0 0 0 3px rgba(20, 168, 0, 0.1);
+}
+
+.btn {
+    border-radius: 8px;
+    font-weight: 600;
+    transition: all 0.3s ease;
+}
+
+.btn-success {
+    background-color: #14a800;
+    border-color: #14a800;
+}
+
+.btn-success:hover {
+    background-color: #108a00;
+    border-color: #108a00;
+    transform: translateY(-1px);
+}
+
+.alert-icon {
+    transition: all 0.3s ease;
+}
+
+.alert:hover .alert-icon {
+    transform: scale(1.1);
+}
+
+.tip-item {
+    transition: all 0.3s ease;
+    padding: 0.5rem;
+    border-radius: 6px;
+}
+
+.tip-item:hover {
+    background-color: #f8f9fa;
+}
+</style>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const container = document.getElementById('skills-container');
+    const addButton = document.getElementById('add-skill');
+    const clearButton = document.getElementById('clear-form');
+    
+    // Add new skill entry
+    addButton.addEventListener('click', function() {
+        const newEntry = document.querySelector('.skill-entry').cloneNode(true);
+        newEntry.querySelectorAll('input, select').forEach(input => {
+            if (input.type !== 'hidden') {
+                input.value = '';
+            }
+        });
+        newEntry.querySelector('.skill-name').value = '';
+        newEntry.querySelector('select').value = '3';
+        newEntry.querySelector('input[type="number"]').value = '';
+        
+        const removeBtn = newEntry.querySelector('.remove-skill');
+        removeBtn.style.display = 'block';
+        removeBtn.style.opacity = '1';
+        removeBtn.addEventListener('click', function() {
+            if (container.children.length > 1) {
+                newEntry.remove();
+            } else {
+                // Clear the form instead of removing the last entry
+                newEntry.querySelectorAll('input, select').forEach(input => {
+                    if (input.type !== 'hidden') {
+                        input.value = '';
+                    }
+                });
+                newEntry.querySelector('select').value = '3';
+            }
+        });
+        
+        container.appendChild(newEntry);
+        newEntry.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    });
+    
+    // Clear all entries except one
+    clearButton.addEventListener('click', function() {
+        const entries = container.querySelectorAll('.skill-entry');
+        if (entries.length > 1) {
+            for (let i = 1; i < entries.length; i++) {
+                entries[i].remove();
+            }
+        }
+        // Clear the first entry
+        const firstEntry = container.querySelector('.skill-entry');
+        firstEntry.querySelectorAll('input, select').forEach(input => {
+            if (input.type !== 'hidden') {
+                input.value = '';
+            }
+        });
+        firstEntry.querySelector('select').value = '3';
+    });
+    
+    // Handle existing remove buttons
+    document.querySelectorAll('.remove-skill').forEach(btn => {
+        if (container.children.length === 1) {
+            btn.style.display = 'none';
+        } else {
+            btn.style.display = 'block';
+        }
+        
+        btn.addEventListener('click', function() {
+            const entry = btn.closest('.skill-entry');
+            if (container.children.length > 1) {
+                entry.remove();
+            } else {
+                // Clear the form instead of removing
+                entry.querySelectorAll('input, select').forEach(input => {
+                    if (input.type !== 'hidden') {
+                        input.value = '';
+                    }
+                });
+                entry.querySelector('select').value = '3';
+            }
+        });
+    });
+    
+    // Handle suggested skills clicks
+    document.querySelectorAll('.suggestion-skill').forEach(suggestion => {
+        suggestion.addEventListener('click', function() {
+            const skillName = this.dataset.skill;
+            const skillCategory = this.dataset.category;
+            
+            // Check if skill already exists
+            let exists = false;
+            document.querySelectorAll('.skill-name').forEach(input => {
+                if (input.value.toLowerCase() === skillName.toLowerCase()) {
+                    exists = true;
+                    input.focus();
+                    input.style.borderColor = '#ffc107';
+                    setTimeout(() => {
+                        input.style.borderColor = '';
+                    }, 1000);
+                }
+            });
+            
+            if (!exists) {
+                // Find an empty skill entry or create new one
+                let targetEntry = null;
+                document.querySelectorAll('.skill-entry').forEach(entry => {
+                    const nameInput = entry.querySelector('.skill-name');
+                    if (!nameInput.value) {
+                        targetEntry = entry;
+                    }
+                });
+                
+                if (!targetEntry) {
+                    addButton.click();
+                    targetEntry = container.lastElementChild;
+                }
+                
+                targetEntry.querySelector('.skill-name').value = skillName;
+                targetEntry.querySelector('input[name="categories[]"]').value = skillCategory;
+                targetEntry.querySelector('.skill-name').focus();
+                
+                // Highlight the added skill
+                targetEntry.style.backgroundColor = '#e8f5e8';
+                setTimeout(() => {
+                    targetEntry.style.backgroundColor = '';
+                }, 1000);
+            }
+        });
+    });
+    
+    // Form validation before submit
+    document.getElementById('skillForm').addEventListener('submit', function(e) {
+        let hasSkills = false;
+        document.querySelectorAll('.skill-name').forEach(input => {
+            if (input.value.trim()) {
+                hasSkills = true;
+            }
+        });
+        
+        if (!hasSkills) {
+            e.preventDefault();
+            alert('Please add at least one skill before saving.');
+        }
+    });
+});
+</script>
+{% endblock %}

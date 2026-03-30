@@ -5,15 +5,14 @@ from django.views.generic import ListView, DetailView, CreateView, UpdateView
 from django.urls import reverse_lazy
 from django.contrib import messages
 from django.db.models import Q, Avg
-from .models import WorkerProfile, JobRequest, Rating, TaskHistory, JobMatch, Skill
-from .forms import CustomUserCreationForm, WorkerProfileForm, JobRequestForm, RatingForm
-from gemini_integration import MatchingEngine, GeminiSkillExtractor
-from .models import JobApplication, ChatMessage, Notification
-from .forms import JobApplicationForm, ChatMessageForm, RatingForm
-from .chatbot import WorkNetChatbot
 from django.http import JsonResponse
 from django.utils import timezone
 import json
+
+from .models import WorkerProfile, JobRequest, Rating, TaskHistory, JobMatch, Skill, WorkerSkill, JobApplication, ChatMessage, Notification
+from .forms import CustomUserCreationForm, WorkerProfileForm, JobRequestForm, RatingForm, JobApplicationForm, ChatMessageForm
+from gemini_integration import MatchingEngine, GeminiSkillExtractor
+from .chatbot import WorkNetChatbot
 
 
 def home(request):
@@ -31,6 +30,7 @@ def home(request):
         'total_jobs': total_jobs,
         'total_employers': total_employers,
     })
+
 
 def register(request):
     if request.method == 'POST':
@@ -52,6 +52,7 @@ def register(request):
     
     return render(request, 'registration/register.html', {'form': form})
 
+
 @login_required
 def dashboard(request):
     try:
@@ -72,6 +73,7 @@ def dashboard(request):
     else:
         return redirect('worker_dashboard')
 
+
 class AdminDashboardView(LoginRequiredMixin, UserPassesTestMixin, ListView):
     model = WorkerProfile
     template_name = 'dashboard/admin_dashboard.html'
@@ -90,6 +92,7 @@ class AdminDashboardView(LoginRequiredMixin, UserPassesTestMixin, ListView):
         context['active_jobs'] = JobRequest.objects.filter(status='open').count()
         return context
 
+
 class EmployerDashboardView(LoginRequiredMixin, UserPassesTestMixin, ListView):
     model = JobRequest
     template_name = 'dashboard/employer_dashboard.html'
@@ -107,6 +110,7 @@ class EmployerDashboardView(LoginRequiredMixin, UserPassesTestMixin, ListView):
         context['active_jobs'] = JobRequest.objects.filter(employer=employer, status='open').count()
         context['completed_jobs'] = JobRequest.objects.filter(employer=employer, status='completed').count()
         return context
+
 
 class WorkerDashboardView(LoginRequiredMixin, UserPassesTestMixin, ListView):
     model = JobRequest
@@ -136,6 +140,7 @@ class WorkerDashboardView(LoginRequiredMixin, UserPassesTestMixin, ListView):
         
         return context
 
+
 class WorkerProfileUpdateView(LoginRequiredMixin, UpdateView):
     model = WorkerProfile
     form_class = WorkerProfileForm
@@ -145,36 +150,390 @@ class WorkerProfileUpdateView(LoginRequiredMixin, UpdateView):
     def get_object(self):
         return self.request.user.workerprofile
     
+    def get_context_data(self, **kwargs):
+        """Add additional context data for the template"""
+        context = super().get_context_data(**kwargs)
+        worker = self.get_object()
+        
+        # Get worker skills with their details
+        worker_skills = WorkerSkill.objects.filter(worker=worker).select_related('skill')
+        context['worker_skills_data'] = [
+            {
+                'skill': ws.skill,
+                'proficiency_level': ws.proficiency_level,
+                'years_of_experience': ws.years_of_experience
+            }
+            for ws in worker_skills
+        ]
+        
+        # Calculate profile strength percentage
+        strength = 0
+        if worker.bio and len(worker.bio.strip()) > 50:
+            strength += 25
+        elif worker.bio and len(worker.bio.strip()) > 0:
+            strength += 15
+            
+        if worker.location and worker.location != 'Unknown' and worker.location.strip():
+            strength += 25
+            
+        if worker_skills.exists():
+            # More skills = higher score
+            skill_count = worker_skills.count()
+            if skill_count >= 5:
+                strength += 30
+            elif skill_count >= 3:
+                strength += 25
+            elif skill_count >= 1:
+                strength += 20
+            
+        if worker.hourly_rate and worker.hourly_rate > 0:
+            strength += 20
+            
+        context['profile_strength'] = strength
+        
+        # Add profile completion checklist
+        context['completion_checklist'] = {
+            'bio': bool(worker.bio),
+            'location': bool(worker.location and worker.location != 'Unknown'),
+            'skills': worker_skills.exists(),
+            'hourly_rate': bool(worker.hourly_rate and worker.hourly_rate > 0)
+        }
+        
+        return context
+    
     def form_valid(self, form):
         response = super().form_valid(form)
         
-        # Extract skills using Gemini AI when skills description is updated
-        if 'skills_description' in form.changed_data:
-            gemini = GeminiSkillExtractor()
-            skills_data = gemini.extract_skills_from_description(form.cleaned_data['skills_description'])
-            
-            # Clear existing skills
-            self.object.extracted_skills.clear()
-            
-            # Add new extracted skills
-            for skill_info in skills_data:
+        # Check if skills description was updated
+        skills_description = form.cleaned_data.get('skills_description')
+        if 'skills_description' in form.changed_data and skills_description:
+            try:
+                # Try Gemini AI extraction
+                from gemini_integration import GeminiSkillExtractor
+                gemini = GeminiSkillExtractor()
+                skills_data = gemini.extract_skills_from_description(skills_description)
+                
+                if skills_data and len(skills_data) > 0:
+                    # Clear existing skills
+                    self.object.extracted_skills.clear()
+                    WorkerSkill.objects.filter(worker=self.object).delete()
+                    
+                    # Add new extracted skills
+                    skills_added = 0
+                    for skill_info in skills_data:
+                        # Ensure required fields exist
+                        skill_name = skill_info.get('skill_name', '').strip().lower()
+                        if not skill_name:
+                            continue
+                            
+                        skill_category = skill_info.get('category', 'General')
+                        proficiency = skill_info.get('proficiency_level', 3)
+                        experience = skill_info.get('years_experience', 0)
+                        
+                        # Get or create skill
+                        skill, created = Skill.objects.get_or_create(
+                            name=skill_name,
+                            defaults={'category': skill_category}
+                        )
+                        
+                        # Create WorkerSkill relationship
+                        WorkerSkill.objects.create(
+                            worker=self.object,
+                            skill=skill,
+                            proficiency_level=proficiency,
+                            years_of_experience=experience
+                        )
+                        skills_added += 1
+                    
+                    if skills_added > 0:
+                        messages.success(self.request, f'✅ {skills_added} skill(s) extracted successfully using AI!')
+                    else:
+                        messages.warning(self.request, 'No valid skills were detected. Please add your skills manually.')
+                        self.request.session['pending_skills_description'] = skills_description
+                        return redirect('manual_skill_entry')
+                else:
+                    messages.warning(self.request, 'No skills were detected. Please add your skills manually.')
+                    self.request.session['pending_skills_description'] = skills_description
+                    return redirect('manual_skill_entry')
+                
+            except ImportError as e:
+                # Gemini integration not available
+                messages.warning(self.request, '⚠️ AI skill extraction is not configured. Please add your skills manually.')
+                self.request.session['pending_skills_description'] = skills_description
+                return redirect('manual_skill_entry')
+                
+            except Exception as e:
+                # Gemini failed (quota exceeded or other error)
+                error_msg = str(e).lower()
+                if 'quota' in error_msg or 'rate limit' in error_msg or 'resource exhausted' in error_msg:
+                    messages.warning(self.request, '⚠️ AI skill extraction is temporarily unavailable due to high demand. Please add your skills manually.')
+                elif 'api key' in error_msg or 'authentication' in error_msg:
+                    messages.warning(self.request, '⚠️ AI service configuration issue. Please add your skills manually.')
+                else:
+                    messages.warning(self.request, f'⚠️ Unable to extract skills automatically: {str(e)[:100]}. Please add your skills manually.')
+                
+                # Store the skills description in session for manual entry
+                self.request.session['pending_skills_description'] = skills_description
+                
+                # Redirect to manual skill entry page
+                return redirect('manual_skill_entry')
+        
+        return response
+    
+    def form_invalid(self, form):
+        # Display all form errors
+        for field, errors in form.errors.items():
+            for error in errors:
+                messages.error(self.request, f'{field}: {error}')
+        return super().form_invalid(form)
+@login_required
+def manual_skill_entry(request):
+    """View for manually entering skills when AI extraction fails"""
+    worker = request.user.workerprofile
+    
+    # Get pending skills description from session
+    skills_description = request.session.pop('pending_skills_description', '')
+    
+    # Get existing skills for the worker
+    existing_skills = WorkerSkill.objects.filter(worker=worker).select_related('skill')
+    
+    if request.method == 'POST':
+        # Handle manual skill addition
+        skill_names = request.POST.getlist('skill_names[]')
+        proficiency_levels = request.POST.getlist('proficiency_levels[]')
+        years_experience = request.POST.getlist('years_experience[]')
+        categories = request.POST.getlist('categories[]')
+        
+        # Clear existing skills
+        WorkerSkill.objects.filter(worker=worker).delete()
+        
+        # Add new skills
+        skills_added = 0
+        for i in range(len(skill_names)):
+            if skill_names[i] and skill_names[i].strip():
+                skill_name = skill_names[i].strip().lower()
+                category = categories[i] if i < len(categories) and categories[i] else get_skill_category(skill_name)
+                proficiency = int(proficiency_levels[i]) if i < len(proficiency_levels) and proficiency_levels[i] else 3
+                experience = float(years_experience[i]) if i < len(years_experience) and years_experience[i] else 0
+                
+                # Validate proficiency level
+                if proficiency < 1:
+                    proficiency = 1
+                if proficiency > 5:
+                    proficiency = 5
+                
+                # Get or create skill
                 skill, created = Skill.objects.get_or_create(
-                    name=skill_info['skill_name'],
-                    defaults={'category': skill_info['category']}
+                    name=skill_name,
+                    defaults={'category': category}
                 )
                 
                 # Create WorkerSkill relationship
-                from .models import WorkerSkill
                 WorkerSkill.objects.create(
-                    worker=self.object,
+                    worker=worker,
                     skill=skill,
-                    proficiency_level=skill_info['proficiency_level'],
-                    years_of_experience=skill_info['years_experience']
+                    proficiency_level=proficiency,
+                    years_of_experience=experience
                 )
-            
-            messages.success(self.request, 'Skills extracted and updated successfully!')
+                skills_added += 1
         
-        return response
+        if skills_added > 0:
+            messages.success(request, f'✅ {skills_added} skill(s) added successfully!')
+        else:
+            messages.warning(request, '⚠️ No skills were added. Please add at least one skill.')
+            return redirect('manual_skill_entry')
+        
+        return redirect('worker_dashboard')
+    
+    # Common skills for informal workers (expanded list)
+    common_skills = [
+        # Construction
+        {'name': 'Masonry', 'category': 'Construction'},
+        {'name': 'Carpentry', 'category': 'Construction'},
+        {'name': 'Plumbing', 'category': 'Construction'},
+        {'name': 'Electrical Work', 'category': 'Construction'},
+        {'name': 'Painting', 'category': 'Construction'},
+        {'name': 'Tiling', 'category': 'Construction'},
+        {'name': 'Welding', 'category': 'Construction'},
+        {'name': 'Roofing', 'category': 'Construction'},
+        {'name': 'Concrete Work', 'category': 'Construction'},
+        {'name': 'Drywall Installation', 'category': 'Construction'},
+        {'name': 'Flooring', 'category': 'Construction'},
+        {'name': 'Cabinet Making', 'category': 'Construction'},
+        {'name': 'Furniture Making', 'category': 'Construction'},
+        {'name': 'General Construction', 'category': 'Construction'},
+        
+        # Hospitality
+        {'name': 'Cooking', 'category': 'Hospitality'},
+        {'name': 'Baking', 'category': 'Hospitality'},
+        {'name': 'Food Preparation', 'category': 'Hospitality'},
+        {'name': 'Restaurant Service', 'category': 'Hospitality'},
+        {'name': 'Bartending', 'category': 'Hospitality'},
+        {'name': 'Catering', 'category': 'Hospitality'},
+        {'name': 'Kitchen Management', 'category': 'Hospitality'},
+        
+        # Domestic
+        {'name': 'Cleaning', 'category': 'Domestic'},
+        {'name': 'Housekeeping', 'category': 'Domestic'},
+        {'name': 'Laundry', 'category': 'Domestic'},
+        {'name': 'Organization', 'category': 'Domestic'},
+        
+        # Landscaping
+        {'name': 'Gardening', 'category': 'Landscaping'},
+        {'name': 'Landscaping', 'category': 'Landscaping'},
+        {'name': 'Tree Cutting', 'category': 'Landscaping'},
+        {'name': 'Lawn Mowing', 'category': 'Landscaping'},
+        {'name': 'Irrigation', 'category': 'Landscaping'},
+        
+        # Transport
+        {'name': 'Driving', 'category': 'Transport'},
+        {'name': 'Delivery', 'category': 'Transport'},
+        {'name': 'Logistics', 'category': 'Transport'},
+        {'name': 'Taxi Service', 'category': 'Transport'},
+        
+        # Security
+        {'name': 'Security Guard', 'category': 'Security'},
+        {'name': 'Surveillance', 'category': 'Security'},
+        
+        # Caregiving
+        {'name': 'Childcare', 'category': 'Caregiving'},
+        {'name': 'Elderly Care', 'category': 'Caregiving'},
+        {'name': 'Nanny Services', 'category': 'Caregiving'},
+        {'name': 'Special Needs Care', 'category': 'Caregiving'},
+        
+        # Education
+        {'name': 'Tutoring', 'category': 'Education'},
+        {'name': 'Teaching', 'category': 'Education'},
+        {'name': 'Language Instruction', 'category': 'Education'},
+        
+        # Events
+        {'name': 'Event Planning', 'category': 'Events'},
+        {'name': 'Event Decoration', 'category': 'Events'},
+        {'name': 'Catering', 'category': 'Events'},
+        
+        # Creative
+        {'name': 'Photography', 'category': 'Creative'},
+        {'name': 'Videography', 'category': 'Creative'},
+        {'name': 'Graphic Design', 'category': 'Creative'},
+        {'name': 'Video Editing', 'category': 'Creative'},
+        
+        # Fashion
+        {'name': 'Tailoring', 'category': 'Fashion'},
+        {'name': 'Sewing', 'category': 'Fashion'},
+        {'name': 'Fashion Design', 'category': 'Fashion'},
+        
+        # Beauty
+        {'name': 'Hair Styling', 'category': 'Beauty'},
+        {'name': 'Makeup Artistry', 'category': 'Beauty'},
+        {'name': 'Manicure/Pedicure', 'category': 'Beauty'},
+        {'name': 'Massage Therapy', 'category': 'Wellness'},
+        {'name': 'Spa Services', 'category': 'Wellness'},
+        
+        # Technical
+        {'name': 'Computer Repair', 'category': 'Technical'},
+        {'name': 'Phone Repair', 'category': 'Technical'},
+        {'name': 'Appliance Repair', 'category': 'Technical'},
+        {'name': 'AC Repair', 'category': 'Technical'},
+    ]
+    
+    # Group skills by category for better display
+    skills_by_category = {}
+    for skill in common_skills:
+        category = skill['category']
+        if category not in skills_by_category:
+            skills_by_category[category] = []
+        skills_by_category[category].append(skill)
+    
+    return render(request, 'workers/manual_skill_entry.html', {
+        'worker': worker,
+        'existing_skills': existing_skills,
+        'skills_by_category': skills_by_category,
+        'skills_description': skills_description
+    })
+
+def get_skill_category(skill_name):
+    """Helper function to determine skill category based on skill name"""
+    skill_name_lower = skill_name.lower()
+    
+    categories = {
+        'construction': ['mason', 'carpent', 'plumb', 'electrical', 'paint', 'tile', 'weld', 'roof', 'concrete', 'brick', 'drywall', 'building', 'construction', 'floor', 'cabinet', 'furniture'],
+        'hospitality': ['cook', 'chef', 'baker', 'kitchen', 'food', 'restaurant', 'hotel', 'bartend', 'catering'],
+        'domestic': ['clean', 'housekeep', 'maid', 'janitor', 'laundry', 'organiz'],
+        'landscaping': ['garden', 'landscap', 'lawn', 'tree', 'plant', 'irrigation'],
+        'transport': ['drive', 'delivery', 'taxi', 'logistics', 'transport'],
+        'security': ['security', 'guard', 'safety', 'patrol', 'surveillance'],
+        'caregiving': ['childcare', 'elderly', 'care', 'nanny', 'babysit', 'nurse', 'special needs'],
+        'education': ['tutor', 'teach', 'instruct', 'trainer', 'language'],
+        'creative': ['design', 'photo', 'art', 'video', 'graphic', 'edit'],
+        'beauty': ['hair', 'makeup', 'cosmetic', 'beauty', 'nail', 'spa'],
+        'wellness': ['massage', 'therapy', 'fitness', 'yoga', 'wellness'],
+        'events': ['event', 'planning', 'coordinator', 'decoration'],
+        'fashion': ['tailor', 'sew', 'fashion', 'clothing', 'garment'],
+        'technical': ['repair', 'fix', 'maintenance', 'computer', 'phone', 'appliance', 'ac']
+    }
+    
+    for category, keywords in categories.items():
+        if any(keyword in skill_name_lower for keyword in keywords):
+            return category.capitalize()
+    
+    return 'General'
+
+
+@login_required
+def add_skill_manual_ajax(request):
+    """AJAX endpoint to manually add a skill"""
+    if request.method == 'POST' and request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+        try:
+            data = json.loads(request.body)
+            skill_name = data.get('skill_name')
+            proficiency_level = data.get('proficiency_level', 3)
+            years_experience = data.get('years_experience', 0)
+            category = data.get('category', '')
+            
+            if not skill_name:
+                return JsonResponse({'error': 'Skill name is required'}, status=400)
+            
+            worker = request.user.workerprofile
+            
+            # Determine category if not provided
+            if not category:
+                category = get_skill_category(skill_name)
+            
+            # Get or create skill
+            skill, created = Skill.objects.get_or_create(
+                name=skill_name.strip().lower(),
+                defaults={'category': category}
+            )
+            
+            # Create or update WorkerSkill
+            worker_skill, created = WorkerSkill.objects.get_or_create(
+                worker=worker,
+                skill=skill,
+                defaults={
+                    'proficiency_level': proficiency_level,
+                    'years_of_experience': years_experience
+                }
+            )
+            
+            if not created:
+                worker_skill.proficiency_level = proficiency_level
+                worker_skill.years_of_experience = years_experience
+                worker_skill.save()
+            
+            return JsonResponse({
+                'success': True,
+                'skill_id': skill.id,
+                'skill_name': skill.name,
+                'proficiency_level': worker_skill.proficiency_level,
+                'years_experience': worker_skill.years_of_experience,
+                'category': skill.category
+            })
+            
+        except Exception as e:
+            return JsonResponse({'error': str(e)}, status=500)
+    
+    return JsonResponse({'error': 'Invalid request'}, status=400)
+
 class WorkerListView(LoginRequiredMixin, ListView):
     model = WorkerProfile
     template_name = 'workers/workerprofile_list.html'
@@ -182,7 +541,7 @@ class WorkerListView(LoginRequiredMixin, ListView):
     paginate_by = 12
     
     def get_queryset(self):
-        queryset = WorkerProfile.objects.filter(user_type='worker').select_related('user').prefetch_related('extracted_skills')
+        queryset = WorkerProfile.objects.filter(user_type='worker').select_related('user').prefetch_related('workerskill_set__skill')
         
         # Search by name or skill
         search_query = self.request.GET.get('q')
@@ -191,14 +550,14 @@ class WorkerListView(LoginRequiredMixin, ListView):
                 Q(user__username__icontains=search_query) |
                 Q(user__first_name__icontains=search_query) |
                 Q(user__last_name__icontains=search_query) |
-                Q(extracted_skills__name__icontains=search_query) |
+                Q(workerskill__skill__name__icontains=search_query) |
                 Q(bio__icontains=search_query)
             ).distinct()
         
         # Filter by category
         category = self.request.GET.get('category')
         if category:
-            queryset = queryset.filter(extracted_skills__category=category).distinct()
+            queryset = queryset.filter(workerskill__skill__category=category).distinct()
         
         # Filter by location
         location = self.request.GET.get('location')
@@ -208,7 +567,7 @@ class WorkerListView(LoginRequiredMixin, ListView):
         # Filter by specific skill
         skill = self.request.GET.get('skill')
         if skill:
-            queryset = queryset.filter(extracted_skills__name__icontains=skill).distinct()
+            queryset = queryset.filter(workerskill__skill__name__icontains=skill).distinct()
         
         return queryset.order_by('-reliability_score', '-is_approved')
     
@@ -221,12 +580,12 @@ class WorkerListView(LoginRequiredMixin, ListView):
         
         # Count unique skill categories
         from django.db.models import Count
-        categories_count = workers.annotate(
-            skill_count=Count('extracted_skills__category', distinct=True)
-        ).aggregate(total_categories=Count('extracted_skills__category', distinct=True))
-        context['categories_count'] = categories_count['total_categories']
+        categories_count = workers.aggregate(total_categories=Count('workerskill__skill__category', distinct=True))
+        context['categories_count'] = categories_count['total_categories'] or 0
         
         return context
+
+
 class JobRequestCreateView(LoginRequiredMixin, UserPassesTestMixin, CreateView):
     model = JobRequest
     form_class = JobRequestForm
@@ -243,7 +602,6 @@ class JobRequestCreateView(LoginRequiredMixin, UserPassesTestMixin, CreateView):
         # Generate matches for the new job
         try:
             # Try Gemini matching first
-            from gemini_integration import MatchingEngine
             matching_engine = MatchingEngine()
             matches = matching_engine.match_workers_to_job(form.instance)
             match_source = "AI"
@@ -257,7 +615,6 @@ class JobRequestCreateView(LoginRequiredMixin, UserPassesTestMixin, CreateView):
         
         # Save matches to database
         for match in matches:
-            from .models import JobMatch
             JobMatch.objects.create(
                 job=form.instance,
                 worker=match['worker'],
@@ -274,6 +631,8 @@ class JobRequestCreateView(LoginRequiredMixin, UserPassesTestMixin, CreateView):
             messages.success(self.request, 'Job created! No workers available for matching yet.')
         
         return response
+
+
 class JobRequestDetailView(LoginRequiredMixin, DetailView):
     model = JobRequest
     template_name = 'jobs/job_detail.html'
@@ -284,13 +643,6 @@ class JobRequestDetailView(LoginRequiredMixin, DetailView):
         context['matches'] = JobMatch.objects.filter(job=self.object).order_by('-match_score')
         return context
 
-class WorkerListView(LoginRequiredMixin, ListView):
-    model = WorkerProfile
-    template_name = 'workers/worker_list.html'
-    context_object_name = 'workers'
-    
-    def get_queryset(self):
-        return WorkerProfile.objects.filter(user_type='worker', is_approved=True)
 
 @login_required
 def approve_worker(request, pk):
@@ -303,6 +655,7 @@ def approve_worker(request, pk):
     worker.save()
     messages.success(request, f'Worker {worker.user.username} approved successfully!')
     return redirect('admin_dashboard')
+
 
 @login_required
 def generate_matches(request, job_id):
@@ -331,25 +684,17 @@ def generate_matches(request, job_id):
     messages.success(request, 'Matches regenerated successfully!')
     return redirect('job_detail', pk=job_id)
 
-# Add these imports at the top
-from .models import JobApplication, ChatMessage, Notification
-from .forms import JobApplicationForm, ChatMessageForm, RatingForm
-from .chatbot import WorkNetChatbot
-from django.http import JsonResponse
-import json
-
-# Add these new views after existing ones
 
 class WorkerDirectoryView(LoginRequiredMixin, ListView):
     model = WorkerProfile
-    template_name = 'workers/worker_directory.html'  # Make sure this matches
+    template_name = 'workers/worker_directory.html'
     context_object_name = 'workers'
     paginate_by = 12
     
     def get_queryset(self):
         queryset = WorkerProfile.objects.filter(
-            user_type='worker'
-        ).select_related('user').prefetch_related('extracted_skills')
+            user_type='worker', is_approved=True
+        ).select_related('user').prefetch_related('workerskill_set__skill')
         
         # Search by name or skill
         search_query = self.request.GET.get('q')
@@ -358,21 +703,22 @@ class WorkerDirectoryView(LoginRequiredMixin, ListView):
                 Q(user__username__icontains=search_query) |
                 Q(user__first_name__icontains=search_query) |
                 Q(user__last_name__icontains=search_query) |
-                Q(extracted_skills__name__icontains=search_query) |
+                Q(workerskill__skill__name__icontains=search_query) |
                 Q(bio__icontains=search_query)
             ).distinct()
         
         # Filter by category
         category = self.request.GET.get('category')
         if category:
-            queryset = queryset.filter(extracted_skills__category=category).distinct()
+            queryset = queryset.filter(workerskill__skill__category=category).distinct()
         
         # Filter by location
         location = self.request.GET.get('location')
         if location:
             queryset = queryset.filter(location__icontains=location)
         
-        return queryset.order_by('-reliability_score', '-is_approved')
+        return queryset.order_by('-reliability_score')
+
 
 @login_required
 def apply_for_job(request, job_id):
@@ -413,6 +759,7 @@ def apply_for_job(request, job_id):
         'job': job
     })
 
+
 @login_required
 def manage_applications(request, job_id):
     job = get_object_or_404(JobRequest, id=job_id)
@@ -429,6 +776,7 @@ def manage_applications(request, job_id):
         'applications': applications
     })
 
+
 @login_required
 def update_application_status(request, application_id, status):
     application = get_object_or_404(JobApplication, id=application_id)
@@ -443,18 +791,35 @@ def update_application_status(request, application_id, status):
         application.status = status
         application.save()
         
-        # Create notification for worker
-        Notification.objects.create(
-            user=application.worker.user,
-            notification_type=f'application_{status}',
-            title=f'Application {status.capitalize()}',
-            message=f"Your application for {application.job.title} has been {status}",
-            related_object_id=application.job.id
-        )
+        # When application is accepted, update the job directly
+        if status == 'accepted':
+            application.job.status = 'in_progress'
+            application.job.assigned_worker = application.worker
+            application.job.save()
+            
+            # Create notification for worker
+            Notification.objects.create(
+                user=application.worker.user,
+                notification_type='job_assigned',
+                title='Job Assigned!',
+                message=f"Your application for '{application.job.title}' has been accepted!",
+                related_object_id=application.job.id
+            )
+        
+        # Create notification for application status change
+        if status in ['accepted', 'rejected']:
+            Notification.objects.create(
+                user=application.worker.user,
+                notification_type=f'application_{status}',
+                title=f'Application {status.capitalize()}',
+                message=f"Your application for {application.job.title} has been {status}",
+                related_object_id=application.job.id
+            )
         
         messages.success(request, f'Application {status} successfully.')
     
     return redirect('manage_applications', job_id=application.job.id)
+
 
 @login_required
 def rate_worker(request, job_id):
@@ -476,12 +841,12 @@ def rate_worker(request, job_id):
             rating = form.save(commit=False)
             rating.job = job
             rating.employer = request.user.workerprofile
-            rating.worker = job.task_history.first().worker  # Get worker from task history
+            rating.worker = job.assigned_worker
             rating.save()
             
             # Update worker's reliability score
             worker_profile = rating.worker
-            avg_rating = worker_profile.ratings_received.aggregate(models.Avg('score'))['score__avg']
+            avg_rating = worker_profile.ratings_received.aggregate(Avg('score'))['score__avg']
             worker_profile.reliability_score = avg_rating or worker_profile.reliability_score
             worker_profile.save()
             
@@ -494,6 +859,7 @@ def rate_worker(request, job_id):
         'form': form,
         'job': job
     })
+
 
 @login_required
 def chatbot(request):
@@ -533,6 +899,7 @@ def chatbot(request):
         'form': ChatMessageForm()
     })
 
+
 @login_required
 def get_chat_history(request):
     """API endpoint to get chat history"""
@@ -547,6 +914,7 @@ def get_chat_history(request):
     ]
     return JsonResponse({'history': history_data})
 
+
 @login_required
 def skill_analysis(request):
     """AI-powered skill analysis for workers"""
@@ -555,7 +923,8 @@ def skill_analysis(request):
         return redirect('dashboard')
     
     worker_profile = request.user.workerprofile
-    skills = worker_profile.extracted_skills.all()
+    worker_skills = WorkerSkill.objects.filter(worker=worker_profile).select_related('skill')
+    skills = [ws.skill for ws in worker_skills]
     
     analysis = None
     if request.method == 'POST':
@@ -567,25 +936,16 @@ def skill_analysis(request):
                 analysis = chatbot.analyze_skills_gap(current_skills, desired_role)
             except Exception as e:
                 messages.error(request, 'Unable to perform skill analysis at the moment.')
-                print(f"Skill analysis error: {e}")  # For debugging
+                print(f"Skill analysis error: {e}")
     
     # Get worker skills with proficiency levels
     worker_skills_data = []
-    for skill in skills:
-        try:
-            worker_skill = worker_profile.workerskill_set.get(skill=skill)
-            worker_skills_data.append({
-                'skill': skill,
-                'proficiency_level': worker_skill.proficiency_level,
-                'years_of_experience': worker_skill.years_of_experience
-            })
-        except WorkerSkill.DoesNotExist:
-            # If no WorkerSkill exists, create a default one
-            worker_skills_data.append({
-                'skill': skill,
-                'proficiency_level': 1,
-                'years_of_experience': 0
-            })
+    for ws in worker_skills:
+        worker_skills_data.append({
+            'skill': ws.skill,
+            'proficiency_level': ws.proficiency_level,
+            'years_of_experience': ws.years_of_experience
+        })
     
     return render(request, 'workers/skill_analysis.html', {
         'worker_profile': worker_profile,
@@ -593,6 +953,7 @@ def skill_analysis(request):
         'worker_skills_data': worker_skills_data,
         'analysis': analysis
     })
+
 
 @login_required
 def notifications(request):
@@ -605,6 +966,7 @@ def notifications(request):
         'unread_count': unread_count
     })
 
+
 @login_required
 def mark_notification_read(request, notification_id):
     """Mark a notification as read"""
@@ -614,12 +976,14 @@ def mark_notification_read(request, notification_id):
     
     return JsonResponse({'success': True})
 
+
 @login_required
 def mark_all_notifications_read(request):
     """Mark all notifications as read"""
     Notification.objects.filter(user=request.user, is_read=False).update(is_read=True)
     messages.success(request, 'All notifications marked as read.')
     return redirect('notifications')
+
 
 class JobSearchView(LoginRequiredMixin, ListView):
     model = JobRequest
@@ -663,12 +1027,6 @@ class JobSearchView(LoginRequiredMixin, ListView):
             queryset = queryset.order_by('-budget')
         elif sort == 'budget_low':
             queryset = queryset.order_by('budget')
-        elif sort == 'closest':
-            # For now, sort by location match - in production you'd use geolocation
-            location_match = self.request.GET.get('location')
-            if location_match:
-                queryset = queryset.filter(location__icontains=location_match)
-            queryset = queryset.order_by('created_at')
         else:  # newest first
             queryset = queryset.order_by('-created_at')
         
@@ -687,6 +1045,7 @@ class JobSearchView(LoginRequiredMixin, ListView):
             context['applied_job_ids'] = list(applied_jobs)
         
         return context
+
 
 class RecommendedJobsView(LoginRequiredMixin, ListView):
     model = JobMatch
@@ -716,6 +1075,8 @@ class RecommendedJobsView(LoginRequiredMixin, ListView):
             context['applied_job_ids'] = list(applied_jobs)
         
         return context
+
+
 @login_required
 def save_job(request, job_id):
     """Save a job for later viewing"""
@@ -732,6 +1093,7 @@ def save_job(request, job_id):
     
     return redirect('job_detail', pk=job_id)
 
+
 @login_required
 def saved_jobs(request):
     """View saved jobs"""
@@ -741,66 +1103,7 @@ def saved_jobs(request):
     return render(request, 'jobs/saved_jobs.html', {
         'saved_jobs': saved_jobs
     })
-@login_required
-def manage_applications(request, job_id):
-    job = get_object_or_404(JobRequest, id=job_id)
-    
-    # Check if user owns the job
-    if job.employer != request.user.workerprofile:
-        messages.error(request, 'You can only manage applications for your own jobs.')
-        return redirect('employer_dashboard')
-    
-    applications = JobApplication.objects.filter(job=job).select_related('worker__user')
-    
-    return render(request, 'jobs/manage_applications.html', {
-        'job': job,
-        'applications': applications
-    })
-@login_required
-def update_application_status(request, application_id, status):
-    application = get_object_or_404(JobApplication, id=application_id)
-    
-    # Check if user owns the job
-    if application.job.employer != request.user.workerprofile:
-        messages.error(request, 'Permission denied.')
-        return redirect('employer_dashboard')
-    
-    valid_statuses = ['accepted', 'rejected', 'withdrawn']
-    if status in valid_statuses:
-        application.status = status
-        application.save()
-        
-        # When application is accepted, update the job directly
-        if status == 'accepted':
-            application.job.status = 'in_progress'
-            application.job.assigned_worker = application.worker
-            application.job.save()
-            
-            # Create notification for worker
-            Notification.objects.create(
-                user=application.worker.user,
-                notification_type='job_assigned',
-                title='Job Assigned!',
-                message=f"Your application for '{application.job.title}' has been accepted! You can now start working.",
-                related_object_id=application.job.id
-            )
-        
-        # Create notification for application status change
-        if status in ['accepted', 'rejected']:
-            Notification.create_application_notification(
-                user=application.worker.user,
-                application=application,
-                notification_type=f'application_{status}'
-            )
-        
-        messages.success(request, f'Application {status} successfully.')
-    
-    return redirect('manage_applications', job_id=application.job.id)
-def send_application_status_email(application, status):
-    """Send email notification for application status change"""
-    # This is a placeholder - you can implement email functionality later
-    # For now, we'll just print to console
-    print(f"Email: Application for {application.job.title} has been {status}")
+
 
 @login_required
 def my_jobs(request):
@@ -839,28 +1142,21 @@ def my_jobs(request):
         elif status_filter == 'completed':
             jobs = [job for job in jobs if job.status == 'completed']
     
-    # Debug info
-    print(f"Found {len(jobs)} jobs for worker {worker.user.username}")
-    for job in jobs:
-        print(f"Job: {job.title}, Status: {job.status}, Can complete: {job.can_be_completed_by_worker()}")
-    
     return render(request, 'jobs/my_jobs.html', {
         'jobs': jobs,
         'status_filter': status_filter
     })
+
+
 @login_required
 def mark_job_completed(request, job_id):
     """Worker marks a job as completed"""
     job = get_object_or_404(JobRequest, id=job_id)
     
     # Check if user is the assigned worker for this job
-    assigned_worker = job.get_assigned_worker()
+    assigned_worker = job.assigned_worker
     if assigned_worker != request.user.workerprofile:
         messages.error(request, 'You can only complete jobs assigned to you.')
-        return redirect('my_jobs')
-    
-    if not job.can_be_completed_by_worker():
-        messages.error(request, 'This job cannot be marked as completed at this time.')
         return redirect('my_jobs')
     
     if request.method == 'POST':
@@ -871,6 +1167,7 @@ def mark_job_completed(request, job_id):
         # Update job - mark as completed by worker
         job.worker_completion_date = timezone.now()
         job.worker_signature = signature_text
+        job.worker_feedback = feedback
         job.save()
         
         # Create notification for employer
@@ -878,7 +1175,7 @@ def mark_job_completed(request, job_id):
             user=job.employer.user,
             notification_type='job_completed',
             title='Job Completed by Worker',
-            message=f"{request.user.username} has marked the job '{job.title}' as completed and is waiting for your approval",
+            message=f"{request.user.username} has marked the job '{job.title}' as completed",
             related_object_id=job.id
         )
         
@@ -889,12 +1186,10 @@ def mark_job_completed(request, job_id):
         'job': job
     })
 
+
 @login_required
 def approve_job(request, job_id):
     """Employer approves a completed job"""
-    from django.db import models  # Add this import
-    from django.utils import timezone
-    
     job = get_object_or_404(JobRequest, id=job_id)
     
     # Check if user owns the job
@@ -902,8 +1197,8 @@ def approve_job(request, job_id):
         messages.error(request, 'You can only approve your own jobs.')
         return redirect('employer_approvals')
     
-    if not job.can_be_approved_by_employer():
-        messages.error(request, 'This job cannot be approved at this time.')
+    if not job.worker_completion_date:
+        messages.error(request, 'This job has not been marked as completed by the worker yet.')
         return redirect('employer_approvals')
     
     if request.method == 'POST':
@@ -914,41 +1209,44 @@ def approve_job(request, job_id):
         # Update job - mark as approved by employer
         job.employer_approval_date = timezone.now()
         job.employer_signature = signature_text
+        job.employer_feedback = feedback
         job.completed_successfully = True
         job.status = 'completed'
         job.save()
         
         # Create rating if provided
-        if rating:
+        if rating and rating.isdigit():
             Rating.objects.create(
-                worker=job.get_assigned_worker(),
+                worker=job.assigned_worker,
                 job=job,
                 employer=request.user.workerprofile,
-                score=rating,
+                score=int(rating),
                 comment=feedback
             )
             
             # Update worker's reliability score
-            worker_profile = job.get_assigned_worker()
-            avg_rating = worker_profile.ratings_received.aggregate(models.Avg('score'))['score__avg']
+            worker_profile = job.assigned_worker
+            avg_rating = worker_profile.ratings_received.aggregate(Avg('score'))['score__avg']
             worker_profile.reliability_score = avg_rating or worker_profile.reliability_score
             worker_profile.save()
         
         # Create notification for worker
         Notification.objects.create(
-            user=job.get_assigned_worker().user,
+            user=job.assigned_worker.user,
             notification_type='job_approved',
             title='Job Approved!',
             message=f"Your work on '{job.title}' has been approved by the employer",
             related_object_id=job.id
         )
         
-        messages.success(request, 'Job approved successfully! Payment can now be processed.')
+        messages.success(request, 'Job approved successfully!')
         return redirect('employer_approvals')
     
     return render(request, 'jobs/approve_job.html', {
         'job': job
     })
+
+
 @login_required
 def employer_approvals(request):
     """View for employers to see jobs waiting for approval"""
@@ -987,6 +1285,7 @@ def employer_approvals(request):
         'in_progress_jobs_count': in_progress_jobs_count
     })
 
+
 @login_required
 def my_applications(request):
     """View for workers to see all jobs they've applied to"""
@@ -1000,6 +1299,8 @@ def my_applications(request):
     return render(request, 'jobs/my_applications.html', {
         'applications': applications
     })
+
+
 @login_required
 def my_assigned_jobs(request):
     """View for workers to see jobs where their application was accepted"""
@@ -1013,16 +1314,6 @@ def my_assigned_jobs(request):
         status='accepted'
     ).select_related('job', 'job__employer__user').order_by('-applied_at')
     
-    # Get corresponding tasks for these accepted jobs
-    assigned_jobs = []
-    for application in accepted_applications:
-        task = TaskHistory.objects.filter(job=application.job, worker=worker).first()
-        assigned_jobs.append({
-            'application': application,
-            'job': application.job,
-            'task': task  # This will be None if no task created yet
-        })
-    
     return render(request, 'jobs/my_assigned_jobs.html', {
-        'assigned_jobs': assigned_jobs
+        'accepted_applications': accepted_applications
     })
