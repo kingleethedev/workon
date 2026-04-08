@@ -8,10 +8,22 @@ from django.db.models import Q, Avg
 from django.http import JsonResponse
 from django.utils import timezone
 import json
+import logging
 
 from .models import WorkerProfile, JobRequest, Rating, TaskHistory, JobMatch, Skill, WorkerSkill, JobApplication, ChatMessage, Notification
 from .forms import CustomUserCreationForm, WorkerProfileForm, JobRequestForm, RatingForm, JobApplicationForm, ChatMessageForm
-from gemini_integration import MatchingEngine, GeminiSkillExtractor
+
+# Set up logging
+logger = logging.getLogger(__name__)
+
+# Try to import Gemini integration with fallback
+try:
+    from gemini_integration import MatchingEngine, GeminiSkillExtractor
+    GEMINI_AVAILABLE = True
+except ImportError:
+    GEMINI_AVAILABLE = False
+    logger.warning("Gemini integration not available, using fallback matching")
+    
 from .chatbot import WorkNetChatbot
 
 
@@ -207,78 +219,82 @@ class WorkerProfileUpdateView(LoginRequiredMixin, UpdateView):
         # Check if skills description was updated
         skills_description = form.cleaned_data.get('skills_description')
         if 'skills_description' in form.changed_data and skills_description:
-            try:
-                # Try Gemini AI extraction
-                from gemini_integration import GeminiSkillExtractor
-                gemini = GeminiSkillExtractor()
-                skills_data = gemini.extract_skills_from_description(skills_description)
-                
-                if skills_data and len(skills_data) > 0:
-                    # Clear existing skills
-                    self.object.extracted_skills.clear()
-                    WorkerSkill.objects.filter(worker=self.object).delete()
-                    
-                    # Add new extracted skills
-                    skills_added = 0
-                    for skill_info in skills_data:
-                        # Ensure required fields exist
-                        skill_name = skill_info.get('skill_name', '').strip().lower()
-                        if not skill_name:
-                            continue
-                            
-                        skill_category = skill_info.get('category', 'General')
-                        proficiency = skill_info.get('proficiency_level', 3)
-                        experience = skill_info.get('years_experience', 0)
-                        
-                        # Get or create skill
-                        skill, created = Skill.objects.get_or_create(
-                            name=skill_name,
-                            defaults={'category': skill_category}
-                        )
-                        
-                        # Create WorkerSkill relationship
-                        WorkerSkill.objects.create(
-                            worker=self.object,
-                            skill=skill,
-                            proficiency_level=proficiency,
-                            years_of_experience=experience
-                        )
-                        skills_added += 1
-                    
-                    if skills_added > 0:
-                        messages.success(self.request, f'✅ {skills_added} skill(s) extracted successfully using AI!')
-                    else:
-                        messages.warning(self.request, 'No valid skills were detected. Please add your skills manually.')
-                        self.request.session['pending_skills_description'] = skills_description
-                        return redirect('manual_skill_entry')
-                else:
-                    messages.warning(self.request, 'No skills were detected. Please add your skills manually.')
-                    self.request.session['pending_skills_description'] = skills_description
-                    return redirect('manual_skill_entry')
-                
-            except ImportError as e:
-                # Gemini integration not available
-                messages.warning(self.request, '⚠️ AI skill extraction is not configured. Please add your skills manually.')
+            # Try AI extraction if available
+            extraction_success = self.extract_skills_with_fallback(skills_description)
+            
+            if not extraction_success:
+                # Store for manual entry
                 self.request.session['pending_skills_description'] = skills_description
-                return redirect('manual_skill_entry')
-                
-            except Exception as e:
-                # Gemini failed (quota exceeded or other error)
-                error_msg = str(e).lower()
-                if 'quota' in error_msg or 'rate limit' in error_msg or 'resource exhausted' in error_msg:
-                    messages.warning(self.request, '⚠️ AI skill extraction is temporarily unavailable due to high demand. Please add your skills manually.')
-                elif 'api key' in error_msg or 'authentication' in error_msg:
-                    messages.warning(self.request, '⚠️ AI service configuration issue. Please add your skills manually.')
-                else:
-                    messages.warning(self.request, f'⚠️ Unable to extract skills automatically: {str(e)[:100]}. Please add your skills manually.')
-                
-                # Store the skills description in session for manual entry
-                self.request.session['pending_skills_description'] = skills_description
-                
-                # Redirect to manual skill entry page
+                messages.info(self.request, 'Please add your skills manually using the form below.')
                 return redirect('manual_skill_entry')
         
         return response
+    
+    def extract_skills_with_fallback(self, skills_description):
+        """Extract skills using Gemini with proper fallback"""
+        if not GEMINI_AVAILABLE:
+            logger.info("Gemini not available, skipping AI extraction")
+            return False
+        
+        try:
+            gemini = GeminiSkillExtractor()
+            skills_data = gemini.extract_skills_from_description(skills_description)
+            
+            if skills_data and len(skills_data) > 0:
+                # Clear existing skills
+                self.object.extracted_skills.clear()
+                WorkerSkill.objects.filter(worker=self.object).delete()
+                
+                # Add new extracted skills
+                skills_added = 0
+                for skill_info in skills_data:
+                    skill_name = skill_info.get('skill_name', '').strip().lower()
+                    if not skill_name:
+                        continue
+                        
+                    skill_category = skill_info.get('category', 'General')
+                    proficiency = skill_info.get('proficiency_level', 3)
+                    experience = skill_info.get('years_experience', 0)
+                    
+                    # Get or create skill
+                    skill, created = Skill.objects.get_or_create(
+                        name=skill_name,
+                        defaults={'category': skill_category}
+                    )
+                    
+                    # Create WorkerSkill relationship
+                    WorkerSkill.objects.create(
+                        worker=self.object,
+                        skill=skill,
+                        proficiency_level=proficiency,
+                        years_of_experience=experience
+                    )
+                    skills_added += 1
+                
+                if skills_added > 0:
+                    messages.success(self.request, f'✅ {skills_added} skill(s) extracted successfully using AI!')
+                    return True
+                else:
+                    logger.warning("No valid skills extracted from description")
+                    return False
+            else:
+                logger.warning("Gemini returned empty skills data")
+                return False
+                
+        except Exception as e:
+            error_msg = str(e).lower()
+            # Check for quota or rate limit errors
+            if any(phrase in error_msg for phrase in ['quota', 'rate limit', 'resource exhausted', '429', 'too many requests']):
+                logger.warning(f"Gemini quota exceeded: {e}")
+                messages.warning(self.request, '⚠️ AI skill extraction is currently unavailable due to high demand. Please add your skills manually.')
+            elif any(phrase in error_msg for phrase in ['api key', 'authentication', '403', '401']):
+                logger.error(f"Gemini authentication error: {e}")
+                messages.warning(self.request, '⚠️ AI service configuration issue. Please add your skills manually.')
+            else:
+                logger.error(f"Gemini extraction error: {e}")
+                messages.warning(self.request, f'⚠️ Unable to extract skills automatically. Please add your skills manually.')
+            
+            return False
     
     def form_invalid(self, form):
         # Display all form errors
@@ -286,6 +302,8 @@ class WorkerProfileUpdateView(LoginRequiredMixin, UpdateView):
             for error in errors:
                 messages.error(self.request, f'{field}: {error}')
         return super().form_invalid(form)
+
+
 @login_required
 def manual_skill_entry(request):
     """View for manually entering skills when AI extraction fails"""
@@ -451,6 +469,7 @@ def manual_skill_entry(request):
         'skills_description': skills_description
     })
 
+
 def get_skill_category(skill_name):
     """Helper function to determine skill category based on skill name"""
     skill_name_lower = skill_name.lower()
@@ -534,6 +553,7 @@ def add_skill_manual_ajax(request):
     
     return JsonResponse({'error': 'Invalid request'}, status=400)
 
+
 class WorkerListView(LoginRequiredMixin, ListView):
     model = WorkerProfile
     template_name = 'workers/workerprofile_list.html'
@@ -599,19 +619,8 @@ class JobRequestCreateView(LoginRequiredMixin, UserPassesTestMixin, CreateView):
         form.instance.employer = self.request.user.workerprofile
         response = super().form_valid(form)
         
-        # Generate matches for the new job
-        try:
-            # Try Gemini matching first
-            matching_engine = MatchingEngine()
-            matches = matching_engine.match_workers_to_job(form.instance)
-            match_source = "AI"
-        except Exception as e:
-            # Fall back to simple matching
-            from .matching import SimpleMatchingEngine
-            matching_engine = SimpleMatchingEngine()
-            matches = matching_engine.match_workers_to_job(form.instance)
-            match_source = "simple"
-            print(f"Gemini matching failed, using simple matching: {e}")
+        # Generate matches with proper fallback
+        matches = self.generate_matches_with_fallback(form.instance)
         
         # Save matches to database
         for match in matches:
@@ -622,15 +631,47 @@ class JobRequestCreateView(LoginRequiredMixin, UserPassesTestMixin, CreateView):
                 skill_relevance=match['skill_relevance'],
                 proximity_score=match['proximity_score'],
                 reliability_score=match['reliability_score'],
-                ai_notes=match['ai_notes']
+                ai_notes=match.get('ai_notes', '')
             )
         
         if matches:
-            messages.success(self.request, f'Job created and matched with {len(matches)} workers using {match_source} matching!')
+            messages.success(self.request, f'Job created and matched with {len(matches)} workers!')
         else:
             messages.success(self.request, 'Job created! No workers available for matching yet.')
         
         return response
+    
+    def generate_matches_with_fallback(self, job):
+        """Generate job matches with fallback when Gemini fails"""
+        # First try Gemini matching if available
+        if GEMINI_AVAILABLE:
+            try:
+                matching_engine = MatchingEngine()
+                matches = matching_engine.match_workers_to_job(job)
+                if matches and len(matches) > 0:
+                    logger.info(f"Gemini matching successful for job {job.id}")
+                    return matches
+                else:
+                    logger.info(f"Gemini returned no matches for job {job.id}, using fallback")
+            except Exception as e:
+                error_msg = str(e).lower()
+                if any(phrase in error_msg for phrase in ['quota', 'rate limit', 'resource exhausted', '429']):
+                    logger.warning(f"Gemini quota exceeded for matching: {e}")
+                    messages.warning(self.request, '⚠️ AI matching temporarily unavailable. Using basic matching instead.')
+                else:
+                    logger.error(f"Gemini matching error: {e}")
+                    messages.warning(self.request, 'Using basic matching for this job.')
+        
+        # Fall back to simple matching
+        try:
+            from .matching import SimpleMatchingEngine
+            matching_engine = SimpleMatchingEngine()
+            matches = matching_engine.match_workers_to_job(job)
+            logger.info(f"Simple matching found {len(matches)} matches for job {job.id}")
+            return matches
+        except Exception as e:
+            logger.error(f"Simple matching also failed: {e}")
+            return []
 
 
 class JobRequestDetailView(LoginRequiredMixin, DetailView):
@@ -665,8 +706,28 @@ def generate_matches(request, job_id):
         messages.error(request, 'Permission denied.')
         return redirect('dashboard')
     
-    matching_engine = MatchingEngine()
-    matches = matching_engine.match_workers_to_job(job)
+    # Use the same fallback logic
+    if GEMINI_AVAILABLE:
+        try:
+            matching_engine = MatchingEngine()
+            matches = matching_engine.match_workers_to_job(job)
+            match_source = "AI"
+        except Exception as e:
+            error_msg = str(e).lower()
+            if any(phrase in error_msg for phrase in ['quota', 'rate limit', 'resource exhausted', '429']):
+                messages.warning(request, '⚠️ AI matching temporarily unavailable. Using basic matching.')
+            else:
+                messages.warning(request, f'Using basic matching due to error.')
+            
+            from .matching import SimpleMatchingEngine
+            matching_engine = SimpleMatchingEngine()
+            matches = matching_engine.match_workers_to_job(job)
+            match_source = "basic"
+    else:
+        from .matching import SimpleMatchingEngine
+        matching_engine = SimpleMatchingEngine()
+        matches = matching_engine.match_workers_to_job(job)
+        match_source = "basic"
     
     # Update existing matches
     JobMatch.objects.filter(job=job).delete()
@@ -678,10 +739,10 @@ def generate_matches(request, job_id):
             skill_relevance=match['skill_relevance'],
             proximity_score=match['proximity_score'],
             reliability_score=match['reliability_score'],
-            ai_notes=match['ai_notes']
+            ai_notes=match.get('ai_notes', '')
         )
     
-    messages.success(request, 'Matches regenerated successfully!')
+    messages.success(request, f'Matches regenerated successfully using {match_source} matching!')
     return redirect('job_detail', pk=job_id)
 
 
@@ -880,7 +941,12 @@ def chatbot(request):
                 chatbot = WorkNetChatbot()
                 bot_response = chatbot.get_response(message, request.user.workerprofile)
             except Exception as e:
-                bot_response = "I'm currently unavailable. Please try again later."
+                error_msg = str(e).lower()
+                if any(phrase in error_msg for phrase in ['quota', 'rate limit', 'resource exhausted', '429']):
+                    bot_response = "I'm currently experiencing high demand. Please try again in a few minutes, or ask me about finding jobs or posting work!"
+                else:
+                    bot_response = "I'm currently unavailable. Please try again later."
+                logger.error(f"Chatbot error: {e}")
             
             # Save bot response
             ChatMessage.objects.create(
@@ -935,8 +1001,19 @@ def skill_analysis(request):
                 current_skills = [skill.name for skill in skills]
                 analysis = chatbot.analyze_skills_gap(current_skills, desired_role)
             except Exception as e:
-                messages.error(request, 'Unable to perform skill analysis at the moment.')
-                print(f"Skill analysis error: {e}")
+                error_msg = str(e).lower()
+                if any(phrase in error_msg for phrase in ['quota', 'rate limit', 'resource exhausted', '429']):
+                    messages.warning(request, '⚠️ AI analysis temporarily unavailable due to high demand. Please try again later.')
+                    # Provide basic fallback analysis
+                    analysis = {
+                        'current_skills': current_skills,
+                        'recommended_skills': ['Communication', 'Problem Solving', 'Time Management'],
+                        'gap_analysis': 'AI analysis is currently unavailable. Focus on building core skills in your field.',
+                        'suggestions': 'Consider taking online courses or seeking mentorship in your area.'
+                    }
+                else:
+                    messages.error(request, 'Unable to perform skill analysis at the moment.')
+                    logger.error(f"Skill analysis error: {e}")
     
     # Get worker skills with proficiency levels
     worker_skills_data = []
@@ -1300,6 +1377,17 @@ def my_applications(request):
         'applications': applications
     })
 
+@login_required
+def clear_chat(request):
+    """Clear all chat messages for the current user"""
+    if request.method == 'POST':
+        try:
+            # Delete all chat messages for this user
+            ChatMessage.objects.filter(user=request.user).delete()
+            return JsonResponse({'success': True, 'message': 'Chat history cleared successfully'})
+        except Exception as e:
+            return JsonResponse({'success': False, 'error': str(e)}, status=500)
+    return JsonResponse({'success': False, 'error': 'Invalid request method'}, status=400)
 
 @login_required
 def my_assigned_jobs(request):

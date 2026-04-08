@@ -410,9 +410,7 @@
                                 <i class="fas fa-chart-line me-2"></i>Skill Analysis
                             </a></li>
                             {% elif user.workerprofile.user_type == 'employer' %}
-                            <li><a class="dropdown-item" href="{% url 'profile_edit' %}">
-                                <i class="fas fa-building me-2"></i>Company Profile
-                            </a></li>
+                            
                             <li><a class="dropdown-item" href="{% url 'employer_dashboard' %}">
                                 <i class="fas fa-chart-bar me-2"></i>Analytics
                             </a></li>

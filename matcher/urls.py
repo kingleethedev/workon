@@ -50,6 +50,7 @@ urlpatterns = [
     # Chatbot
     path('chatbot/', views.chatbot, name='chatbot'),
     path('chatbot/history/', views.get_chat_history, name='get_chat_history'),
+    path('chat/clear/', views.clear_chat, name='clear_chat'),
     
     # Notifications
     path('notifications/', views.notifications, name='notifications'),

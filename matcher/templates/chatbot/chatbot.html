@@ -29,8 +29,10 @@
                         <i class="fas fa-comments me-2"></i>AI Assistant
                     </h5>
                     <div class="d-flex align-items-center">
-                        <span class="badge bg-light text-success me-2">Online</span>
-                        <button class="btn btn-sm btn-light" onclick="clearChat()">
+                        <span class="badge bg-light text-success me-2" id="aiStatus">
+                            <i class="fas fa-circle me-1" style="font-size: 8px;"></i>Online
+                        </span>
+                        <button class="btn btn-sm btn-light" onclick="clearChat()" id="clearChatBtn">
                             <i class="fas fa-trash me-1"></i>Clear
                         </button>
                     </div>
@@ -69,7 +71,7 @@
                         </div>
                     </div>
                     {% empty %}
-                    <div class="text-center py-5">
+                    <div class="text-center py-5" id="welcomeMessage">
                         <div class="welcome-icon bg-success bg-opacity-10 rounded-circle d-inline-flex align-items-center justify-content-center mb-4" style="width: 80px; height: 80px;">
                             <i class="fas fa-robot fa-2x text-success"></i>
                         </div>
@@ -95,7 +97,7 @@
                         {% csrf_token %}
                         <div class="input-group input-group-lg">
                             {{ form.message }}
-                            <button type="submit" class="btn btn-success">
+                            <button type="submit" class="btn btn-success" id="sendBtn">
                                 <i class="fas fa-paper-plane me-1"></i>Send
                             </button>
                         </div>
@@ -135,7 +137,7 @@
                                 Optimize my profile
                             </button>
                             <button class="btn btn-outline-success text-start quick-question" data-question="Can you analyze my current skills and suggest areas for improvement?">
-                                <i class="fas fa-analytics me-2"></i>
+                                <i class="fas fa-chart-line me-2"></i>
                                 Analyze my skills
                             </button>
                         </div>
@@ -233,6 +235,7 @@
 .message-bubble {
     border: 1px solid #e4ebe4;
     position: relative;
+    word-wrap: break-word;
 }
 
 .message-bubble.bg-success {
@@ -304,6 +307,7 @@
 #id_message:focus {
     border-color: #14a800;
     box-shadow: 0 0 0 3px rgba(20, 168, 0, 0.1);
+    outline: none;
 }
 
 .input-group-lg > .form-control {
@@ -313,20 +317,75 @@
 .input-group-lg > .btn {
     border-radius: 0 25px 25px 0;
 }
+
+/* Typing indicator animation */
+.typing-indicator {
+    display: flex;
+    gap: 4px;
+    padding: 8px 12px;
+}
+
+.typing-indicator span {
+    width: 8px;
+    height: 8px;
+    background-color: #14a800;
+    border-radius: 50%;
+    animation: typing 1.4s infinite ease-in-out;
+}
+
+.typing-indicator span:nth-child(1) {
+    animation-delay: -0.32s;
+}
+
+.typing-indicator span:nth-child(2) {
+    animation-delay: -0.16s;
+}
+
+@keyframes typing {
+    0%, 60%, 100% {
+        transform: translateY(0);
+        opacity: 0.4;
+    }
+    30% {
+        transform: translateY(-10px);
+        opacity: 1;
+    }
+}
+
+/* Loading spinner for clear button */
+.btn-loading {
+    opacity: 0.7;
+    pointer-events: none;
+}
+
+.spinner-border-sm {
+    width: 1rem;
+    height: 1rem;
+    border-width: 0.2em;
+}
 </style>
 
 <script>
     // Auto-scroll to bottom of chat
     const chatMessages = document.getElementById('chatMessages');
-    chatMessages.scrollTop = chatMessages.scrollHeight;
+    function scrollToBottom() {
+        chatMessages.scrollTop = chatMessages.scrollHeight;
+    }
+    scrollToBottom();
 
     // Quick question buttons
     document.querySelectorAll('.quick-question').forEach(button => {
         button.addEventListener('click', function(e) {
             e.preventDefault();
             const question = this.getAttribute('data-question');
-            document.querySelector('#id_message').value = question;
-            document.getElementById('chatForm').dispatchEvent(new Event('submit'));
+            const messageInput = document.querySelector('#id_message');
+            messageInput.value = question;
+            messageInput.focus();
+            
+            // Auto-submit after a short delay
+            setTimeout(() => {
+                document.getElementById('chatForm').dispatchEvent(new Event('submit'));
+            }, 100);
         });
     });
 
@@ -336,14 +395,19 @@
         const formData = new FormData(this);
         const message = formData.get('message');
         
-        if (message.trim()) {
+        if (message && message.trim()) {
+            // Disable send button to prevent double submission
+            const sendBtn = document.getElementById('sendBtn');
+            sendBtn.disabled = true;
+            sendBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>Sending...';
+            
             // Add user message immediately
             const userMessageDiv = document.createElement('div');
             userMessageDiv.className = 'mb-4 text-end';
             userMessageDiv.innerHTML = `
                 <div class="d-flex justify-content-end align-items-start">
                     <div class="message-bubble bg-success text-white p-3 rounded-3 shadow-sm" style="max-width: 70%;">
-                        <div class="message-content">${message}</div>
+                        <div class="message-content">${escapeHtml(message)}</div>
                         <div class="message-time small text-light mt-2">
                             <i class="fas fa-clock me-1"></i>Just now
                         </div>
@@ -358,12 +422,19 @@
             // Clear input
             document.querySelector('#id_message').value = '';
             
+            // Remove welcome message if it exists
+            const welcomeMsg = document.getElementById('welcomeMessage');
+            if (welcomeMsg) {
+                welcomeMsg.remove();
+            }
+            
             // Scroll to bottom
-            chatMessages.scrollTop = chatMessages.scrollHeight;
+            scrollToBottom();
             
             // Show typing indicator
             const typingDiv = document.createElement('div');
             typingDiv.className = 'mb-4';
+            typingDiv.id = 'typingIndicator';
             typingDiv.innerHTML = `
                 <div class="d-flex justify-content-start align-items-start">
                     <div class="bot-avatar bg-success rounded-circle d-flex align-items-center justify-content-center me-3" style="width: 40px; height: 40px;">
@@ -379,7 +450,7 @@
                 </div>
             `;
             chatMessages.appendChild(typingDiv);
-            chatMessages.scrollTop = chatMessages.scrollHeight;
+            scrollToBottom();
 
             // Send to server
             fetch('{% url "chatbot" %}', {
@@ -389,7 +460,10 @@
             .then(response => response.json())
             .then(data => {
                 // Remove typing indicator
-                chatMessages.removeChild(typingDiv);
+                const typingIndicator = document.getElementById('typingIndicator');
+                if (typingIndicator) {
+                    typingIndicator.remove();
+                }
                 
                 // Add bot response
                 const botMessageDiv = document.createElement('div');
@@ -400,7 +474,7 @@
                             <i class="fas fa-robot text-white"></i>
                         </div>
                         <div class="message-bubble bg-white text-dark p-3 rounded-3 shadow-sm" style="max-width: 70%;">
-                            <div class="message-content">${data.response}</div>
+                            <div class="message-content">${escapeHtml(data.response)}</div>
                             <div class="message-time small text-muted mt-2">
                                 <i class="fas fa-clock me-1"></i>Just now
                             </div>
@@ -408,27 +482,159 @@
                     </div>
                 `;
                 chatMessages.appendChild(botMessageDiv);
-                chatMessages.scrollTop = chatMessages.scrollHeight;
+                scrollToBottom();
+                
+                // Update AI status if there was an error
+                if (data.response.includes("quota") || data.response.includes("unavailable")) {
+                    const statusSpan = document.getElementById('aiStatus');
+                    statusSpan.innerHTML = '<i class="fas fa-exclamation-triangle me-1"></i>Limited Mode';
+                    statusSpan.classList.remove('bg-light', 'text-success');
+                    statusSpan.classList.add('bg-warning', 'text-dark');
+                }
             })
             .catch(error => {
                 console.error('Error:', error);
-                chatMessages.removeChild(typingDiv);
+                const typingIndicator = document.getElementById('typingIndicator');
+                if (typingIndicator) {
+                    typingIndicator.remove();
+                }
+                
+                // Show error message
+                const errorDiv = document.createElement('div');
+                errorDiv.className = 'mb-4';
+                errorDiv.innerHTML = `
+                    <div class="d-flex justify-content-start align-items-start">
+                        <div class="bot-avatar bg-danger rounded-circle d-flex align-items-center justify-content-center me-3" style="width: 40px; height: 40px;">
+                            <i class="fas fa-exclamation-triangle text-white"></i>
+                        </div>
+                        <div class="message-bubble bg-danger text-white p-3 rounded-3 shadow-sm" style="max-width: 70%;">
+                            <div class="message-content">Sorry, I'm having trouble connecting. Please try again.</div>
+                        </div>
+                    </div>
+                `;
+                chatMessages.appendChild(errorDiv);
+                scrollToBottom();
+            })
+            .finally(() => {
+                // Re-enable send button
+                sendBtn.disabled = false;
+                sendBtn.innerHTML = '<i class="fas fa-paper-plane me-1"></i>Send';
             });
         }
     });
 
     function clearChat() {
-        if (confirm('Are you sure you want to clear the chat history?')) {
-            fetch('{% url "chatbot" %}', {
+        if (confirm('Are you sure you want to clear the chat history? This cannot be undone.')) {
+            const clearBtn = document.getElementById('clearChatBtn');
+            const originalText = clearBtn.innerHTML;
+            clearBtn.disabled = true;
+            clearBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>Clearing...';
+            
+            fetch('{% url "clear_chat" %}', {
                 method: 'POST',
                 headers: {
-                    'Content-Type': 'application/x-www-form-urlencoded',
+                    'X-CSRFToken': getCookie('csrftoken'),
+                    'Content-Type': 'application/json'
                 },
-                body: 'clear_chat=true'
-            }).then(() => {
-                location.reload();
+                body: JSON.stringify({ clear: true })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    // Clear all messages from DOM
+                    chatMessages.innerHTML = `
+                        <div class="text-center py-5" id="welcomeMessage">
+                            <div class="welcome-icon bg-success bg-opacity-10 rounded-circle d-inline-flex align-items-center justify-content-center mb-4" style="width: 80px; height: 80px;">
+                                <i class="fas fa-robot fa-2x text-success"></i>
+                            </div>
+                            <h4 class="text-dark mb-3">Chat Cleared! 👋</h4>
+                            <p class="text-muted mb-4">Your conversation history has been cleared. Start a new conversation!</p>
+                            <div class="row justify-content-center">
+                                <div class="col-md-8">
+                                    <div class="alert alert-success">
+                                        <strong>Try asking me:</strong><br>
+                                        • "What skills are in demand for my profile?"<br>
+                                        • "How can I improve my job applications?"<br>
+                                        • "Analyze my current skills and suggest improvements"
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                    scrollToBottom();
+                    
+                    // Reset status indicator
+                    const statusSpan = document.getElementById('aiStatus');
+                    statusSpan.innerHTML = '<i class="fas fa-circle me-1" style="font-size: 8px;"></i>Online';
+                    statusSpan.classList.remove('bg-warning', 'text-dark');
+                    statusSpan.classList.add('bg-light', 'text-success');
+                    
+                    // Show success message
+                    showToast('Chat cleared successfully!', 'success');
+                } else {
+                    showToast('Failed to clear chat. Please try again.', 'error');
+                }
+            })
+            .catch(error => {
+                console.error('Error clearing chat:', error);
+                showToast('Error clearing chat. Please try again.', 'error');
+            })
+            .finally(() => {
+                clearBtn.disabled = false;
+                clearBtn.innerHTML = originalText;
             });
         }
     }
+    
+    // Helper function to escape HTML
+    function escapeHtml(text) {
+        const div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
+    }
+    
+    // Helper function to get CSRF token
+    function getCookie(name) {
+        let cookieValue = null;
+        if (document.cookie && document.cookie !== '') {
+            const cookies = document.cookie.split(';');
+            for (let i = 0; i < cookies.length; i++) {
+                const cookie = cookies[i].trim();
+                if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                    break;
+                }
+            }
+        }
+        return cookieValue;
+    }
+    
+    // Simple toast notification
+    function showToast(message, type = 'success') {
+        const toast = document.createElement('div');
+        toast.className = `position-fixed bottom-0 end-0 p-3 m-3 alert alert-${type === 'success' ? 'success' : 'danger'} shadow-lg`;
+        toast.style.zIndex = '9999';
+        toast.innerHTML = `
+            <div class="d-flex align-items-center">
+                <i class="fas fa-${type === 'success' ? 'check-circle' : 'exclamation-circle'} me-2"></i>
+                <div>${message}</div>
+                <button type="button" class="btn-close ms-3" data-bs-dismiss="toast"></button>
+            </div>
+        `;
+        document.body.appendChild(toast);
+        
+        setTimeout(() => {
+            toast.style.opacity = '0';
+            setTimeout(() => toast.remove(), 300);
+        }, 3000);
+    }
+    
+    // Handle Enter key press
+    document.querySelector('#id_message').addEventListener('keypress', function(e) {
+        if (e.key === 'Enter' && !e.shiftKey) {
+            e.preventDefault();
+            document.getElementById('chatForm').dispatchEvent(new Event('submit'));
+        }
+    });
 </script>
 {% endblock %}
