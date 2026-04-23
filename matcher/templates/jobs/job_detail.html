@@ -23,6 +23,22 @@
                     </div>
                 </div>
                 
+                <!-- Display Required Skills -->
+                <div class="mb-4">
+                    <h6 class="text-success fw-bold mb-3">
+                        <i class="fas fa-tools me-2"></i>Required Skills
+                    </h6>
+                    <div class="d-flex flex-wrap gap-2">
+                        {% if job.required_skills.exists %}
+                            {% for skill in job.required_skills.all %}
+                                <span class="badge bg-success text-white px-3 py-2">{{ skill.name }}</span>
+                            {% endfor %}
+                        {% else %}
+                            <span class="text-muted">No specific skills required</span>
+                        {% endif %}
+                    </div>
+                </div>
+                
                 <div class="row mt-4">
                     <div class="col-md-6">
                         <div class="d-flex align-items-center mb-3">
@@ -33,7 +49,6 @@
                             </div>
                         </div>
                         <div class="d-flex align-items-center mb-3">
-                           
                             <div>
                                 <strong class="d-block text-muted">Budget</strong>
                                 <span class="text-dark fw-bold">KSH{{ job.budget }}</span>
@@ -65,6 +80,7 @@
                     <a href="{% url 'generate_matches' job.id %}" class="btn btn-success">
                         <i class="fas fa-sync-alt me-2"></i>Regenerate Matches
                     </a>
+                    
                 </div>
                 {% endif %}
             </div>
@@ -74,54 +90,177 @@
     <div class="col-md-4">
         <div class="card shadow-sm border-0 rounded-3">
             <div class="card-header bg-light py-3">
-                <div class="d-flex align-items-center">
-                    <i class="fas fa-users text-success me-2"></i>
-                    <h5 class="mb-0">Top Matches</h5>
+                <div class="d-flex align-items-center justify-content-between">
+                    <div>
+                        <i class="fas fa-users text-success me-2"></i>
+                        <h5 class="mb-0 d-inline-block">Top Matches</h5>
+                    </div>
+                    <span class="badge bg-secondary">{{ matches|length }} found</span>
                 </div>
             </div>
-            <div class="card-body p-3">
+            <div class="card-body p-3" style="max-height: 600px; overflow-y: auto;">
                 {% if matches %}
-                    {% for match in matches|slice:":5" %}
-                    <div class="border-bottom pb-3 mb-3">
+                    {% for match in matches|slice:":10" %}
+                    <div class="border-bottom pb-3 mb-3 {% if forloop.last %}border-0 mb-0 pb-0{% endif %}">
                         <div class="d-flex justify-content-between align-items-start mb-2">
                             <div class="flex-grow-1">
-                                <strong class="d-block text-dark">{{ match.worker.user.username }}</strong>
+                                <strong class="d-block text-dark">
+                                    <i class="fas fa-user-circle text-success me-1"></i>
+                                    {{ match.worker.user.get_full_name|default:match.worker.user.username }}
+                                </strong>
                                 <small class="text-muted">
-                                    <i class="fas fa-map-marker-alt me-1"></i>{{ match.worker.location }}
+                                    <i class="fas fa-map-marker-alt me-1"></i>{{ match.worker.location|default:"Location not specified" }}
                                 </small>
                             </div>
                             <span class="badge 
                                 {% if match.match_score > 0.7 %}bg-success
                                 {% elif match.match_score > 0.4 %}bg-warning text-dark
-                                {% else %}bg-secondary{% endif %} rounded-pill px-3">
-                                {{ match.match_score|floatformat:0 }}%
+                                {% else %}bg-secondary{% endif %} rounded-pill px-3 py-2">
+                                <!-- Show percentage properly -->
+                                {% widthratio match.match_score 1 100 as percentage %}
+                                {{ percentage|floatformat:0 }}%
                             </span>
                         </div>
                         
-                        <div class="mb-2">
-                            <small class="text-muted fw-bold">Skills:</small>
-                            <div class="mt-1">
-                                {% for skill in match.worker.extracted_skills.all|slice:":3" %}
-                                <span class="badge bg-light text-dark border me-1 mb-1">{{ skill.name }}</span>
-                                {% endfor %}
+                        <!-- Show match breakdown -->
+                        <div class="small text-muted mb-2">
+                            <div class="progress mb-1" style="height: 4px;">
+                                <div class="progress-bar bg-success" role="progressbar" style="width: {% widthratio match.match_score 1 100 %}%"></div>
+                            </div>
+                            <div class="row text-center">
+                                <div class="col-4">
+                                    <i class="fas fa-chart-line me-1"></i>{{ match.skill_relevance|floatformat:1 }}
+                                </div>
+                                <div class="col-4">
+                                    <i class="fas fa-star me-1"></i>{{ match.reliability_score|floatformat:1 }}
+                                </div>
+                                <div class="col-4">
+                                    <i class="fas fa-map-marker me-1"></i>{{ match.proximity_score|floatformat:1 }}
+                                </div>
                             </div>
                         </div>
                         
-                        <div class="small text-muted">
-                            <i class="fas fa-robot me-1"></i>
-                            <em>{{ match.ai_notes|truncatewords:8 }}</em>
+                        <!-- Show worker skills -->
+                        <div class="mb-2">
+                            <small class="text-muted fw-bold">Worker Skills:</small>
+                            <div class="mt-1">
+                                {% with worker_skills=match.worker.workerskill_set.all %}
+                                    {% if worker_skills %}
+                                        {% for worker_skill in worker_skills|slice:":3" %}
+                                            <span class="badge {% if worker_skill.skill in job.required_skills.all %}bg-success{% else %}bg-light text-dark border{% endif %} me-1 mb-1">
+                                                {{ worker_skill.skill.name }}
+                                                {% if worker_skill.proficiency_level %} (L{{ worker_skill.proficiency_level }}){% endif %}
+                                            </span>
+                                        {% endfor %}
+                                        {% if worker_skills.count > 3 %}
+                                            <span class="badge bg-light text-dark border">+{{ worker_skills.count|add:"-3" }}</span>
+                                        {% endif %}
+                                    {% else %}
+                                        <span class="text-danger small">⚠️ No skills added - Add skills to get better matches!</span>
+                                    {% endif %}
+                                {% endwith %}
+                            </div>
+                        </div>
+                        
+                        <!-- Show matching skills -->
+                        {% with matching_skills=job.required_skills.all %}
+                            {% if matching_skills and match.worker.workerskill_set.all %}
+                                {% for job_skill in matching_skills %}
+                                    {% for worker_skill in match.worker.workerskill_set.all %}
+                                        {% if worker_skill.skill.id == job_skill.id %}
+                                            <div class="mb-2">
+                                                <span class="badge bg-success text-white">
+                                                    <i class="fas fa-check-circle me-1"></i>Matches: {{ job_skill.name }}
+                                                </span>
+                                            </div>
+                                        {% endif %}
+                                    {% endfor %}
+                                {% endfor %}
+                            {% endif %}
+                        {% endwith %}
+                        
+                        <div class="small text-muted mt-2">
+                            <em>{{ match.ai_notes|default:"No match notes available" }}</em>
                         </div>
                     </div>
                     {% endfor %}
                 {% else %}
-                    <div class="text-center py-4">
-                        <i class="fas fa-users fa-2x text-muted mb-3"></i>
-                        <p class="text-muted mb-2">No matches yet</p>
-                        <a href="{% url 'generate_matches' job.id %}" class="btn btn-success btn-sm">
-                            <i class="fas fa-bolt me-1"></i>Generate Matches
-                        </a>
+                    <div class="text-center py-5">
+                        <i class="fas fa-users fa-3x text-muted mb-3"></i>
+                        <p class="text-muted mb-2">No matches found yet</p>
+                        <p class="small text-muted mb-3">
+                            <i class="fas fa-info-circle me-1"></i>
+                            Make sure workers have skills added to their profiles
+                        </p>
+                        {% if job.employer.user == user %}
+                            <a href="{% url 'generate_matches' job.id %}" class="btn btn-success btn-sm rounded-pill px-4">
+                                <i class="fas fa-bolt me-2"></i>Generate Matches
+                            </a>
+                        {% endif %}
                     </div>
                 {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Debug Modal -->
+<div class="modal fade" id="debugModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header bg-info text-white">
+                <h5 class="modal-title"><i class="fas fa-bug me-2"></i>Skill Matching Debug</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <h6>Job Required Skills:</h6>
+                <div class="mb-3">
+                    {% if job.required_skills.exists %}
+                        {% for skill in job.required_skills.all %}
+                            <span class="badge bg-success mb-1">{{ skill.name }}</span>
+                        {% endfor %}
+                    {% else %}
+                        <p class="text-warning">⚠️ No required skills set for this job</p>
+                    {% endif %}
+                </div>
+                
+                <h6>Workers with Skills:</h6>
+                <div class="table-responsive">
+                    <table class="table table-sm">
+                        <thead>
+                            <tr>
+                                <th>Worker</th>
+                                <th>Skills Count</th>
+                                <th>Skills</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for match in matches|slice:":5" %}
+                            <tr>
+                                <td>{{ match.worker.user.username }}</td>
+                                <td>{{ match.worker.workerskill_set.count }}</td>
+                                <td>
+                                    {% for ws in match.worker.workerskill_set.all|slice:":3" %}
+                                        <span class="badge bg-secondary">{{ ws.skill.name }}</span>
+                                    {% endfor %}
+                                </td>
+                            </tr>
+                            {% empty %}
+                            <tr>
+                                <td colspan="3" class="text-center text-muted">No matches available</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                
+                <div class="alert alert-info mt-3">
+                    <strong>💡 Why am I seeing 1%?</strong><br>
+                    - Match score of 0.01 = 1%<br>
+                    - This happens when workers have NO matching skills<br>
+                    - Solution: Workers need to add skills to their profiles via the "Edit Profile" page<br>
+                    - Employers should add required skills to jobs for better matching
+                </div>
             </div>
         </div>
     </div>
@@ -146,6 +285,48 @@
 
 .badge.bg-light {
     border: 1px solid #dee2e6 !important;
+    font-weight: normal;
+}
+
+.badge.bg-success.bg-opacity-10 {
+    background-color: rgba(25, 135, 84, 0.1) !important;
+}
+
+.progress {
+    background-color: #e9ecef;
+    border-radius: 2px;
+}
+
+.progress-bar {
+    transition: width 0.3s ease;
+}
+
+/* Custom scrollbar */
+.card-body::-webkit-scrollbar {
+    width: 6px;
+}
+
+.card-body::-webkit-scrollbar-track {
+    background: #f1f1f1;
+    border-radius: 3px;
+}
+
+.card-body::-webkit-scrollbar-thumb {
+    background: #888;
+    border-radius: 3px;
 }
 </style>
+
+<script>
+// Optional: Add tooltips
+document.addEventListener('DOMContentLoaded', function() {
+    // Add tooltips to badges if needed
+    var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'))
+    if (typeof bootstrap !== 'undefined') {
+        var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+            return new bootstrap.Tooltip(tooltipTriggerEl)
+        });
+    }
+});
+</script>
 {% endblock %}

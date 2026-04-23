@@ -606,6 +606,9 @@ class WorkerListView(LoginRequiredMixin, ListView):
         return context
 
 
+
+# matcher/views.py - Add this class if missing
+
 class JobRequestCreateView(LoginRequiredMixin, UserPassesTestMixin, CreateView):
     model = JobRequest
     form_class = JobRequestForm
@@ -619,30 +622,52 @@ class JobRequestCreateView(LoginRequiredMixin, UserPassesTestMixin, CreateView):
         form.instance.employer = self.request.user.workerprofile
         response = super().form_valid(form)
         
+        # Show extracted skills to employer
+        extracted_skills = form.instance.required_skills.all()
+        if extracted_skills:
+            skill_names = [s.name for s in extracted_skills]
+            messages.success(self.request, f'✅ Job created! Detected skills: {", ".join(skill_names)}')
+        else:
+            messages.info(self.request, 'Job created! No specific skills detected. You can add skills manually from the job details page.')
+        
         # Generate matches with proper fallback
         matches = self.generate_matches_with_fallback(form.instance)
         
         # Save matches to database
+        from .models import JobMatch
         for match in matches:
             JobMatch.objects.create(
                 job=form.instance,
                 worker=match['worker'],
                 match_score=match['match_score'],
-                skill_relevance=match['skill_relevance'],
-                proximity_score=match['proximity_score'],
-                reliability_score=match['reliability_score'],
+                skill_relevance=match.get('skill_relevance', 0),
+                proximity_score=match.get('proximity_score', 0),
+                reliability_score=match.get('reliability_score', 0),
                 ai_notes=match.get('ai_notes', '')
             )
         
         if matches:
-            messages.success(self.request, f'Job created and matched with {len(matches)} workers!')
+            # Show match quality information
+            top_match_score = matches[0]['match_score'] if matches else 0
+            messages.success(self.request, f'🎯 Matched with {len(matches)} workers! Best match: {top_match_score*100:.0f}%')
         else:
-            messages.success(self.request, 'Job created! No workers available for matching yet.')
+            messages.warning(self.request, 'No workers available for matching yet. Workers need to add skills to their profiles.')
         
         return response
     
     def generate_matches_with_fallback(self, job):
         """Generate job matches with fallback when Gemini fails"""
+        import logging
+        logger = logging.getLogger(__name__)
+        
+        # Try to import Gemini
+        try:
+            from gemini_integration import MatchingEngine
+            GEMINI_AVAILABLE = True
+        except ImportError:
+            GEMINI_AVAILABLE = False
+            logger.warning("Gemini integration not available")
+        
         # First try Gemini matching if available
         if GEMINI_AVAILABLE:
             try:
@@ -650,6 +675,9 @@ class JobRequestCreateView(LoginRequiredMixin, UserPassesTestMixin, CreateView):
                 matches = matching_engine.match_workers_to_job(job)
                 if matches and len(matches) > 0:
                     logger.info(f"Gemini matching successful for job {job.id}")
+                    # Add AI note
+                    for match in matches:
+                        match['ai_notes'] = f"AI Match: {match.get('ai_notes', 'Good match based on skills')}"
                     return matches
                 else:
                     logger.info(f"Gemini returned no matches for job {job.id}, using fallback")
@@ -660,19 +688,24 @@ class JobRequestCreateView(LoginRequiredMixin, UserPassesTestMixin, CreateView):
                     messages.warning(self.request, '⚠️ AI matching temporarily unavailable. Using basic matching instead.')
                 else:
                     logger.error(f"Gemini matching error: {e}")
-                    messages.warning(self.request, 'Using basic matching for this job.')
+                    messages.warning(self.request, '⚠️ Using basic matching for this job.')
         
         # Fall back to simple matching
         try:
             from .matching import SimpleMatchingEngine
             matching_engine = SimpleMatchingEngine()
             matches = matching_engine.match_workers_to_job(job)
+            
+            # Add fallback note
+            for match in matches:
+                if 'ai_notes' not in match or not match['ai_notes']:
+                    match['ai_notes'] = f"Matched with {match['match_score']*100:.0f}% score based on skills, reliability, and proximity"
+            
             logger.info(f"Simple matching found {len(matches)} matches for job {job.id}")
             return matches
         except Exception as e:
             logger.error(f"Simple matching also failed: {e}")
             return []
-
 
 class JobRequestDetailView(LoginRequiredMixin, DetailView):
     model = JobRequest
@@ -697,16 +730,36 @@ def approve_worker(request, pk):
     messages.success(request, f'Worker {worker.user.username} approved successfully!')
     return redirect('admin_dashboard')
 
-
 @login_required
 def generate_matches(request, job_id):
+    """Generate or regenerate matches for a specific job"""
     job = get_object_or_404(JobRequest, id=job_id)
     
-    if not request.user.workerprofile.user_type == 'employer' or job.employer != request.user.workerprofile:
-        messages.error(request, 'Permission denied.')
+    # Check permissions
+    if not hasattr(request.user, 'workerprofile'):
+        messages.error(request, 'Please complete your profile first.')
         return redirect('dashboard')
     
-    # Use the same fallback logic
+    if request.user.workerprofile.user_type != 'employer' or job.employer != request.user.workerprofile:
+        messages.error(request, 'Permission denied. You can only generate matches for your own jobs.')
+        return redirect('dashboard')
+    
+    # Use the fallback logic
+    from django.contrib import messages
+    from django.utils import timezone
+    import logging
+    
+    logger = logging.getLogger(__name__)
+    
+    # Try to import Gemini
+    try:
+        from gemini_integration import MatchingEngine
+        GEMINI_AVAILABLE = True
+    except ImportError:
+        GEMINI_AVAILABLE = False
+        logger.warning("Gemini integration not available")
+    
+    # Generate matches with fallback
     if GEMINI_AVAILABLE:
         try:
             matching_engine = MatchingEngine()
@@ -716,8 +769,10 @@ def generate_matches(request, job_id):
             error_msg = str(e).lower()
             if any(phrase in error_msg for phrase in ['quota', 'rate limit', 'resource exhausted', '429']):
                 messages.warning(request, '⚠️ AI matching temporarily unavailable. Using basic matching.')
+                logger.warning(f"Gemini quota exceeded: {e}")
             else:
                 messages.warning(request, f'Using basic matching due to error.')
+                logger.error(f"Gemini matching error: {e}")
             
             from .matching import SimpleMatchingEngine
             matching_engine = SimpleMatchingEngine()
@@ -730,21 +785,168 @@ def generate_matches(request, job_id):
         match_source = "basic"
     
     # Update existing matches
+    from .models import JobMatch
     JobMatch.objects.filter(job=job).delete()
+    
     for match in matches:
         JobMatch.objects.create(
             job=job,
             worker=match['worker'],
             match_score=match['match_score'],
-            skill_relevance=match['skill_relevance'],
-            proximity_score=match['proximity_score'],
-            reliability_score=match['reliability_score'],
+            skill_relevance=match.get('skill_relevance', 0),
+            proximity_score=match.get('proximity_score', 0),
+            reliability_score=match.get('reliability_score', 0),
             ai_notes=match.get('ai_notes', '')
         )
     
-    messages.success(request, f'Matches regenerated successfully using {match_source} matching!')
+    messages.success(request, f'✅ Matches regenerated successfully using {match_source} matching! Found {len(matches)} workers.')
     return redirect('job_detail', pk=job_id)
-
+# Add to matcher/views.py
+@login_required
+def debug_matching(request, job_id):
+    """Debug endpoint to check why matches have low scores"""
+    job = get_object_or_404(JobRequest, id=job_id)
+    
+    if not request.user.workerprofile.user_type == 'employer' or job.employer != request.user.workerprofile:
+        return JsonResponse({'error': 'Permission denied'}, status=403)
+    
+    from .matching import SimpleMatchingEngine
+    engine = SimpleMatchingEngine()
+    
+    # Get all workers
+    workers = WorkerProfile.objects.filter(is_approved=True, user_type='worker')
+    
+    debug_info = {
+        'job_id': job.id,
+        'job_title': job.title,
+        'required_skills': [s.name for s in job.required_skills.all()],
+        'total_workers': workers.count(),
+        'matches': []
+    }
+    
+    for worker in workers[:10]:  # Check first 10 workers
+        worker_skills = list(worker.workerskill_set.select_related('skill').values_list('skill__name', flat=True))
+        
+        # Calculate match
+        if job.required_skills.exists():
+            job_skills = set(job.required_skills.values_list('name', flat=True))
+            worker_skills_set = set(worker_skills)
+            common = job_skills & worker_skills_set
+            skill_match = len(common) / len(job_skills) if job_skills else 0
+        else:
+            skill_match = 0.5  # Default if no skills required
+        
+        debug_info['matches'].append({
+            'worker_id': worker.id,
+            'worker_name': worker.user.username,
+            'worker_skills': list(worker_skills),
+            'matching_skills': list(common) if job.required_skills.exists() else [],
+            'skill_match_score': skill_match,
+            'has_skills': len(worker_skills) > 0,
+            'is_approved': worker.is_approved
+        })
+    
+    return JsonResponse(debug_info, safe=False)
+@login_required
+def debug_match_scores(request, job_id):
+    """Debug endpoint to check why match scores are low"""
+    from django.http import JsonResponse
+    from .models import JobMatch, WorkerSkill, Skill
+    
+    job = get_object_or_404(JobRequest, id=job_id)
+    
+    if not request.user.workerprofile.user_type == 'employer' or job.employer != request.user.workerprofile:
+        return JsonResponse({'error': 'Permission denied'}, status=403)
+    
+    # Get job skills
+    job_skills = list(job.required_skills.values_list('name', flat=True))
+    
+    # Get all matches for this job
+    matches = JobMatch.objects.filter(job=job).select_related('worker')
+    
+    debug_data = {
+        'job_id': job.id,
+        'job_title': job.title,
+        'job_skills': job_skills,
+        'job_skills_count': len(job_skills),
+        'total_matches': matches.count(),
+        'matches_detail': []
+    }
+    
+    for match in matches[:10]:
+        # Get worker's actual skills from WorkerSkill model (not extracted_skills)
+        worker_skills = WorkerSkill.objects.filter(worker=match.worker).select_related('skill')
+        worker_skill_names = [ws.skill.name for ws in worker_skills]
+        
+        # Calculate what the match score should be
+        if job_skills:
+            matching_skills = [s for s in job_skills if s in worker_skill_names]
+            correct_skill_match = len(matching_skills) / len(job_skills) if job_skills else 0
+        else:
+            correct_skill_match = 0.5
+        
+        debug_data['matches_detail'].append({
+            'worker_id': match.worker.id,
+            'worker_name': match.worker.user.username,
+            'current_match_score': match.match_score,
+            'current_skill_relevance': match.skill_relevance,
+            'worker_skills': worker_skill_names,
+            'matching_skills': matching_skills if job_skills else [],
+            'correct_skill_match': correct_skill_match,
+            'should_match_score': correct_skill_match * 0.6 + 0.2 + 0.2,  # Using weights from your matching engine
+            'has_skills': len(worker_skill_names) > 0
+        })
+    
+    return JsonResponse(debug_data, safe=False)
+@login_required
+def generate_matches_with_fallback(self, job):
+    """Generate job matches with fallback when Gemini fails"""
+    # First try Gemini matching if available
+    if GEMINI_AVAILABLE:
+        try:
+            matching_engine = MatchingEngine()
+            matches = matching_engine.match_workers_to_job(job)
+            if matches and len(matches) > 0:
+                logger.info(f"Gemini matching successful for job {job.id}")
+                # Add a note to the first match indicating it's AI-powered
+                if matches and 'ai_notes' in matches[0]:
+                    matches[0]['ai_notes'] += " (Powered by AI)"
+                return matches
+            else:
+                logger.info(f"Gemini returned no matches for job {job.id}, using fallback")
+        except Exception as e:
+            error_msg = str(e).lower()
+            if any(phrase in error_msg for phrase in ['quota', 'rate limit', 'resource exhausted', '429']):
+                logger.warning(f"Gemini quota exceeded for matching: {e}")
+                messages.warning(self.request, '⚠️ AI matching temporarily unavailable due to high demand. Using basic skill matching instead.')
+            else:
+                logger.error(f"Gemini matching error: {e}")
+                messages.warning(self.request, '⚠️ Using basic matching for this job. Skills will still be matched based on your profile.')
+    
+    # Fall back to simple matching (uses WorkerSkill model which has manually entered skills)
+    try:
+        from .matching import SimpleMatchingEngine
+        matching_engine = SimpleMatchingEngine()
+        matches = matching_engine.match_workers_to_job(job)
+        
+        # Add fallback note to matches
+        for match in matches:
+            if 'ai_notes' in match:
+                match['ai_notes'] += " (Basic matching - Skills based on your profile)"
+            else:
+                match['ai_notes'] = "Matched based on skills and reliability (Basic matching)"
+        
+        logger.info(f"Simple matching found {len(matches)} matches for job {job.id}")
+        
+        # Show success message if matches found
+        if matches:
+            messages.info(self.request, f'Found {len(matches)} potential workers for this job based on skill matching!')
+        
+        return matches
+    except Exception as e:
+        logger.error(f"Simple matching also failed: {e}")
+        messages.error(self.request, 'Unable to generate matches at this time. Please try again later.')
+        return []
 
 class WorkerDirectoryView(LoginRequiredMixin, ListView):
     model = WorkerProfile

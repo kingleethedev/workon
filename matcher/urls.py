@@ -66,4 +66,6 @@ urlpatterns = [
     # Employer Approvals
     path('employer/approvals/', views.employer_approvals, name='employer_approvals'),
     path('jobs/<int:job_id>/approve/', views.approve_job, name='approve_job'),
+    path('jobs/<int:job_id>/debug-matching/', views.debug_matching, name='debug_matching'),
+    path('jobs/<int:job_id>/debug-scores/', views.debug_match_scores, name='debug_match_scores'),
 ]
